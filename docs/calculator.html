@@ -1,0 +1,4147 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>GitHub Copilot UBB · Budget Calculator</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+        href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500;700&display=swap"
+        rel="stylesheet" />
+    <style>
+        :root {
+            --bg: #0c0e12;
+            --bg2: #141720;
+            --bg3: #1a1e28;
+            --bg4: #222838;
+            --tx: #e8e6e1;
+            --tx2: #a8a49c;
+            --tx3: #706c64;
+            --accent: #f05a28;
+            --accent2: #ff8c5a;
+            --accentBg: rgba(240, 90, 40, .12);
+            --teal: #2cb3a0;
+            --tealBg: rgba(44, 179, 160, .12);
+            --blue: #4a8af4;
+            --blueBg: rgba(74, 138, 244, .12);
+            --plum: #b35dcc;
+            --plumBg: rgba(179, 93, 204, .12);
+            --gold: #d4a942;
+            --goldBg: rgba(212, 169, 66, .12);
+            --green: #3bba6e;
+            --greenBg: rgba(59, 186, 110, .12);
+            --red: #e04646;
+            --redBg: rgba(224, 70, 70, .12);
+            --rule: #2a2e3a;
+            --rule2: #363c4c;
+            --serif: 'DM Serif Display', Georgia, serif;
+            --sans: 'DM Sans', 'Helvetica Neue', system-ui, sans-serif;
+            --mono: 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+            --shadow: 0 2px 12px rgba(0, 0, 0, .4);
+        }
+
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box
+        }
+
+        html {
+            scroll-behavior: smooth;
+            scrollbar-color: var(--rule2) var(--bg)
+        }
+
+        body {
+            margin: 0;
+            background: var(--bg);
+            color: var(--tx);
+            font-family: var(--sans);
+            font-size: 15px;
+            line-height: 1.6;
+            -webkit-font-smoothing: antialiased
+        }
+
+        ::selection {
+            background: var(--accent);
+            color: #fff
+        }
+
+        a {
+            color: var(--accent2);
+            text-decoration: none;
+            border-bottom: 1px solid transparent;
+            transition: .15s
+        }
+
+        a:hover {
+            border-bottom-color: var(--accent2)
+        }
+
+        code,
+        .mono {
+            font-family: var(--mono);
+            font-size: .88em;
+            background: var(--bg3);
+            padding: 2px 6px;
+            border-radius: 3px
+        }
+
+        strong {
+            font-weight: 600;
+            color: var(--tx)
+        }
+
+        /* LAYOUT */
+        .shell {
+            max-width: 1280px;
+            margin: 0 auto;
+            padding: 0 28px;
+            position: relative
+        }
+
+        @media(max-width:720px) {
+            .shell {
+                padding: 0 16px
+            }
+        }
+
+        /* MASTHEAD */
+        .mast {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px 0;
+            border-bottom: 1px solid var(--rule);
+            font-family: var(--mono);
+            font-size: 11px;
+            letter-spacing: .14em;
+            text-transform: uppercase;
+            color: var(--tx3)
+        }
+
+        .mast .brand {
+            color: var(--tx);
+            font-weight: 700
+        }
+
+        .mast .brand em {
+            font-style: normal;
+            color: var(--accent)
+        }
+
+        @media(max-width:600px) {
+            .mast {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 6px
+            }
+        }
+
+        /* HERO */
+        .hero {
+            padding: 64px 0 48px;
+            border-bottom: 1px solid var(--rule);
+            position: relative;
+            overflow: hidden
+        }
+
+        .hero .eyebrow {
+            font-family: var(--mono);
+            font-size: 11.5px;
+            letter-spacing: .2em;
+            text-transform: uppercase;
+            color: var(--accent);
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px
+        }
+
+        .hero .eyebrow::before {
+            content: '';
+            width: 32px;
+            height: 2px;
+            background: var(--accent)
+        }
+
+        .hero h1 {
+            font-family: var(--serif);
+            font-size: clamp(38px, 7vw, 88px);
+            line-height: .96;
+            letter-spacing: -.02em;
+            margin: 0 0 24px;
+            font-weight: 400
+        }
+
+        .hero h1 i {
+            font-style: italic;
+            color: var(--accent)
+        }
+
+        .hero .deck {
+            font-size: clamp(17px, 1.8vw, 22px);
+            line-height: 1.5;
+            color: var(--tx2);
+            margin: 0 0 36px
+        }
+
+        /* HERO STAT BLOCK */
+        .headline-numbers {
+            display: grid;
+            grid-template-columns: 1fr auto 1fr auto 1fr;
+            gap: 0;
+            align-items: center;
+            margin: 48px 0 32px;
+            padding: 32px;
+            background: var(--bg2);
+            border: 1px solid var(--rule2);
+            border-radius: 6px;
+            position: relative;
+            overflow: hidden
+        }
+
+        .headline-numbers.two-cell {
+            grid-template-columns: 1fr auto 1fr
+        }
+
+        .headline-numbers::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 4px;
+            background: linear-gradient(180deg, var(--red), var(--green))
+        }
+
+        .hn-cell {
+            padding: 0 20px;
+            text-align: center
+        }
+
+        .hn-cell .lbl {
+            font-family: var(--mono);
+            font-size: 9.5px;
+            letter-spacing: .18em;
+            text-transform: uppercase;
+            color: var(--tx3);
+            margin-bottom: 8px
+        }
+
+        .hn-cell .val {
+            font-family: var(--serif);
+            font-size: clamp(36px, 5vw, 64px);
+            line-height: 1;
+            font-weight: 400;
+            letter-spacing: -.02em
+        }
+
+        .hn-cell .val.red {
+            color: var(--red)
+        }
+
+        .hn-cell .val.gold {
+            color: var(--gold)
+        }
+
+        .hn-cell .val.green {
+            color: var(--green)
+        }
+
+        .hn-cell .sub {
+            font-family: var(--mono);
+            font-size: 10px;
+            color: var(--tx3);
+            margin-top: 4px;
+            letter-spacing: .08em
+        }
+
+        .hn-arrow {
+            font-family: var(--mono);
+            color: var(--accent);
+            font-size: 24px
+        }
+
+        @media(max-width:760px) {
+            .headline-numbers {
+                grid-template-columns: 1fr;
+                gap: 24px;
+                padding: 24px
+            }
+
+            .hn-arrow {
+                transform: rotate(90deg);
+                font-size: 18px
+            }
+        }
+
+        .hero .tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 28px
+        }
+
+        .hero .tag {
+            font-family: var(--mono);
+            font-size: 10.5px;
+            letter-spacing: .12em;
+            text-transform: uppercase;
+            padding: 6px 12px;
+            border: 1px solid var(--rule2);
+            border-radius: 3px;
+            color: var(--tx2)
+        }
+
+        .hero .tag strong {
+            color: var(--tx);
+            font-weight: 600
+        }
+
+        /* TLDR */
+        .tldr {
+            margin: 40px 0 0;
+            background: var(--bg2);
+            border: 1px solid var(--rule2);
+            border-radius: 4px;
+            padding: 32px 28px;
+            position: relative;
+            overflow: hidden
+        }
+
+        .tldr::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 4px;
+            background: var(--accent)
+        }
+
+        .tldr .label {
+            font-family: var(--mono);
+            font-size: 10px;
+            letter-spacing: .25em;
+            text-transform: uppercase;
+            color: var(--accent);
+            margin-bottom: 16px;
+            font-weight: 700
+        }
+
+        .tldr ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            display: grid;
+            gap: 14px
+        }
+
+        .tldr li {
+            padding-left: 24px;
+            position: relative;
+            font-size: 14.5px;
+            line-height: 1.6;
+            color: var(--tx2)
+        }
+
+        .tldr li::before {
+            content: '→';
+            position: absolute;
+            left: 0;
+            color: var(--accent);
+            font-family: var(--mono);
+            font-weight: 700
+        }
+
+        .tldr li strong {
+            color: var(--accent2)
+        }
+
+        /* TOC */
+        .toc {
+            margin: 40px 0 0;
+            padding: 20px 0;
+            border-top: 1px solid var(--rule);
+            border-bottom: 1px solid var(--rule);
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 8px 24px
+        }
+
+        .toc .label {
+            font-family: var(--mono);
+            font-size: 10px;
+            letter-spacing: .2em;
+            text-transform: uppercase;
+            color: var(--tx3);
+            margin-right: 8px
+        }
+
+        .toc a {
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--tx2);
+            padding: 4px 0
+        }
+
+        .toc a:hover {
+            color: var(--accent)
+        }
+
+        /* SECTION */
+        section {
+            padding: 64px 0 32px;
+            border-bottom: 1px solid var(--rule)
+        }
+
+        section:last-of-type {
+            border-bottom: none
+        }
+
+        .sec-head {
+            display: flex;
+            align-items: flex-start;
+            gap: 24px;
+            margin-bottom: 32px
+        }
+
+        .sec-head .num {
+            font-family: var(--mono);
+            font-size: 12px;
+            color: var(--accent);
+            letter-spacing: .15em;
+            padding-top: 10px;
+            white-space: nowrap
+        }
+
+        .sec-head h2 {
+            font-family: var(--serif);
+            font-size: clamp(28px, 4vw, 48px);
+            line-height: 1.05;
+            margin: 0;
+            font-weight: 400
+        }
+
+        .sec-head h2 i {
+            font-style: italic;
+            color: var(--accent2)
+        }
+
+        h3 {
+            font-family: var(--serif);
+            font-size: 24px;
+            margin: 48px 0 14px;
+            font-weight: 400;
+            color: var(--tx)
+        }
+
+        h4 {
+            font-family: var(--mono);
+            font-size: 11px;
+            letter-spacing: .18em;
+            text-transform: uppercase;
+            color: var(--accent);
+            margin: 28px 0 12px;
+            font-weight: 700
+        }
+
+        p {
+            margin: 0 0 16px;
+            color: var(--tx2)
+        }
+
+        /* TIER BADGES */
+        .tier {
+            font-family: var(--mono);
+            font-size: 9.5px;
+            font-weight: 700;
+            letter-spacing: .12em;
+            text-transform: uppercase;
+            padding: 3px 8px 2px;
+            border-radius: 2px;
+            white-space: nowrap;
+            display: inline-block
+        }
+
+        .t-std {
+            background: var(--blueBg);
+            color: var(--blue)
+        }
+
+        .t-pwr {
+            background: var(--plumBg);
+            color: var(--plum)
+        }
+
+        .t-vip {
+            background: var(--goldBg);
+            color: var(--gold)
+        }
+
+        .t-ent {
+            background: var(--accentBg);
+            color: var(--accent)
+        }
+
+        .t-cc {
+            background: var(--tealBg);
+            color: var(--teal)
+        }
+
+        .t-usr {
+            background: var(--greenBg);
+            color: var(--green)
+        }
+
+        /* COST CONCENTRATION (Pareto) */
+        .pareto {
+            margin: 24px 0 32px;
+            background: var(--bg2);
+            border: 1px solid var(--rule2);
+            border-radius: 4px;
+            padding: 24px
+        }
+
+        .pareto-head {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            margin-bottom: 18px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid var(--rule)
+        }
+
+        .pareto-head h4 {
+            margin: 0;
+            color: var(--tx);
+            font-family: var(--mono);
+            font-size: 11px
+        }
+
+        .pareto-head .total {
+            font-family: var(--serif);
+            font-size: 24px;
+            color: var(--accent)
+        }
+
+        .pareto-row {
+            display: grid;
+            grid-template-columns: 180px 1fr 90px 80px;
+            align-items: center;
+            gap: 12px;
+            padding: 8px 0;
+            border-bottom: 1px dashed var(--rule)
+        }
+
+        .pareto-row:last-child {
+            border-bottom: none
+        }
+
+        .pareto-row .model {
+            font-weight: 600;
+            color: var(--tx);
+            font-size: 14px
+        }
+
+        .pareto-row .model small {
+            display: block;
+            font-family: var(--mono);
+            font-size: 10px;
+            color: var(--tx3);
+            font-weight: 400;
+            margin-top: 2px
+        }
+
+        .pareto-bar {
+            height: 18px;
+            background: var(--bg);
+            border-radius: 2px;
+            overflow: hidden;
+            position: relative
+        }
+
+        .pareto-fill {
+            height: 100%;
+            display: flex;
+            align-items: center;
+            padding: 0 8px;
+            font-family: var(--mono);
+            font-size: 10px;
+            color: rgba(255, 255, 255, .85);
+            font-weight: 600;
+            transition: width .6s ease-out
+        }
+
+        .pareto-fill.opus46 {
+            background: linear-gradient(90deg, #c1402c, #e04646)
+        }
+
+        .pareto-fill.sonnet46 {
+            background: linear-gradient(90deg, #9a4ba8, #b35dcc)
+        }
+
+        .pareto-fill.gpt54 {
+            background: linear-gradient(90deg, #3268b8, #4a8af4)
+        }
+
+        .pareto-fill.opus47 {
+            background: linear-gradient(90deg, #a83a25, #c14a35)
+        }
+
+        .pareto-fill.other {
+            background: linear-gradient(90deg, #5a5e6e, #706c64)
+        }
+
+        .pareto-row .cost {
+            font-family: var(--mono);
+            font-size: 13px;
+            text-align: right;
+            color: var(--tx);
+            font-weight: 600
+        }
+
+        .pareto-row .users {
+            font-family: var(--mono);
+            font-size: 11px;
+            color: var(--tx3);
+            text-align: right
+        }
+
+        @media(max-width:700px) {
+            .pareto-row {
+                grid-template-columns: 1fr;
+                gap: 6px
+            }
+
+            .pareto-row .cost,
+            .pareto-row .users {
+                text-align: left
+            }
+        }
+
+        /* FOUR LEVERS */
+        .levers {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 1px;
+            background: var(--rule);
+            margin: 24px 0;
+            border: 1px solid var(--rule2);
+            border-radius: 4px;
+            overflow: hidden
+        }
+
+        .lever {
+            background: var(--bg2);
+            padding: 24px 20px;
+            position: relative
+        }
+
+        .lever .letter {
+            font-family: var(--serif);
+            font-style: italic;
+            font-size: 56px;
+            line-height: .9;
+            color: var(--accent);
+            margin-bottom: 8px;
+            opacity: .5
+        }
+
+        .lever h5 {
+            font-family: var(--serif);
+            font-size: 19px;
+            margin: 0 0 8px;
+            font-weight: 400;
+            line-height: 1.2
+        }
+
+        .lever p {
+            font-size: 13px;
+            color: var(--tx2);
+            margin: 0 0 12px;
+            line-height: 1.5
+        }
+
+        .lever .impact {
+            font-family: var(--mono);
+            font-size: 10px;
+            color: var(--green);
+            letter-spacing: .1em;
+            padding-top: 8px;
+            border-top: 1px solid var(--rule)
+        }
+
+        /* PLAN SELECTION CARDS */
+        .plan-select {
+            margin: 0 0 32px
+        }
+
+        .plan-select-head {
+            display: flex;
+            align-items: baseline;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-bottom: 16px
+        }
+
+        .plan-select-head h4 {
+            margin: 0;
+            color: var(--accent)
+        }
+
+        .plan-select-head .recco {
+            font-family: var(--mono);
+            font-size: 10.5px;
+            color: var(--green);
+            letter-spacing: .12em;
+            text-transform: uppercase;
+            font-weight: 700
+        }
+
+        .plan-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 14px
+        }
+
+        .plan-card {
+            background: var(--bg2);
+            border: 1px solid var(--rule2);
+            border-radius: 6px;
+            padding: 24px 22px;
+            position: relative;
+            transition: .15s
+        }
+
+        .plan-card.recommended {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 1px var(--accent) inset, 0 4px 16px rgba(240, 90, 40, .1)
+        }
+
+        .plan-card .ribbon {
+            position: absolute;
+            top: -1px;
+            right: 18px;
+            background: var(--accent);
+            color: #fff;
+            font-family: var(--mono);
+            font-size: 9px;
+            letter-spacing: .18em;
+            padding: 5px 10px 4px;
+            border-radius: 0 0 3px 3px;
+            font-weight: 700;
+            text-transform: uppercase
+        }
+
+        .plan-card h5 {
+            font-family: var(--serif);
+            font-size: 26px;
+            margin: 0 0 4px;
+            font-weight: 400;
+            line-height: 1.1
+        }
+
+        .plan-card .plan-sub {
+            font-family: var(--mono);
+            font-size: 10.5px;
+            color: var(--tx3);
+            letter-spacing: .1em;
+            text-transform: uppercase;
+            margin-bottom: 18px
+        }
+
+        .plan-card .price-line {
+            display: flex;
+            align-items: baseline;
+            gap: 6px;
+            font-family: var(--serif);
+            font-size: 42px;
+            line-height: 1;
+            margin: 6px 0 14px;
+            color: var(--tx);
+            font-weight: 400
+        }
+
+        .plan-card .price-line em {
+            font-family: var(--sans);
+            font-style: normal;
+            font-size: 13px;
+            color: var(--tx3);
+            letter-spacing: .04em
+        }
+
+        .plan-card .price-line strong {
+            font-family: var(--mono);
+            font-size: 13px;
+            color: var(--tx2);
+            font-weight: 400;
+            margin-left: auto;
+            font-feature-settings: 'tnum' 1
+        }
+
+        .plan-block {
+            padding: 14px 14px;
+            border-radius: 4px;
+            margin-bottom: 8px;
+            border-left: 3px solid
+        }
+
+        .plan-block.promo {
+            background: rgba(59, 186, 110, .06);
+            border-color: var(--green)
+        }
+
+        .plan-block.std {
+            background: var(--bg3);
+            border-color: var(--tx3)
+        }
+
+        .plan-block-tag {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-family: var(--mono);
+            font-size: 9.5px;
+            letter-spacing: .14em;
+            text-transform: uppercase;
+            font-weight: 700;
+            margin-bottom: 8px
+        }
+
+        .plan-block.promo .plan-block-tag {
+            color: var(--green)
+        }
+
+        .plan-block.std .plan-block-tag {
+            color: var(--tx2)
+        }
+
+        .plan-block-tag em {
+            font-style: normal;
+            color: var(--tx3);
+            font-weight: 400;
+            letter-spacing: .04em;
+            text-transform: none;
+            font-size: 10px
+        }
+
+        .plan-block .calc {
+            font-family: var(--mono);
+            font-size: 12.5px;
+            color: var(--tx2);
+            line-height: 1.5;
+            font-feature-settings: 'tnum' 1
+        }
+
+        .plan-block .calc .pool {
+            display: block;
+            margin-top: 4px;
+            font-size: 14px;
+            color: var(--tx);
+            font-weight: 600
+        }
+
+        .plan-block.promo .calc .pool {
+            color: var(--green)
+        }
+
+        .plan-card .fixed-cost {
+            margin-top: 14px;
+            padding-top: 14px;
+            border-top: 1px solid var(--rule);
+            font-family: var(--mono);
+            font-size: 11.5px;
+            color: var(--tx2);
+            display: flex;
+            justify-content: space-between;
+            font-feature-settings: 'tnum' 1
+        }
+
+        .plan-card .fixed-cost b {
+            color: var(--tx);
+            font-weight: 600
+        }
+
+        @media(max-width:760px) {
+            .plan-grid {
+                grid-template-columns: 1fr
+            }
+        }
+
+        /* BUDGET HIERARCHY DIAGRAM */
+        .hierarchy {
+            margin: 32px 0;
+            background: var(--bg2);
+            border: 1px solid var(--rule2);
+            border-radius: 6px;
+            padding: 32px;
+            position: relative
+        }
+
+        .hier-rule {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            margin-bottom: 24px;
+            padding: 14px 18px;
+            background: var(--bg3);
+            border-left: 3px solid var(--accent);
+            border-radius: 2px
+        }
+
+        .hier-rule .ico {
+            font-family: var(--mono);
+            color: var(--accent);
+            font-weight: 700
+        }
+
+        .hier-rule p {
+            margin: 0;
+            color: var(--tx);
+            font-size: 14px;
+            max-width: none
+        }
+
+        .hier-rule strong {
+            color: var(--accent2)
+        }
+
+        .hier-layers {
+            display: grid;
+            gap: 14px
+        }
+
+        .hier-layer {
+            display: grid;
+            grid-template-columns: 60px 1fr;
+            gap: 18px;
+            align-items: center;
+            padding: 18px 22px;
+            border: 1px solid var(--rule2);
+            border-radius: 4px;
+            background: var(--bg3);
+            transition: .15s
+        }
+
+        .hier-layer:hover {
+            transform: translateX(4px);
+            border-color: var(--accent)
+        }
+
+        .hier-layer .num {
+            font-family: var(--serif);
+            font-style: italic;
+            font-size: 48px;
+            line-height: 1;
+            color: var(--accent);
+            text-align: center
+        }
+
+        .hier-layer .body h5 {
+            margin: 0 0 4px;
+            font-family: var(--mono);
+            font-size: 10.5px;
+            letter-spacing: .15em;
+            text-transform: uppercase;
+            color: var(--accent2)
+        }
+
+        .hier-layer .body h6 {
+            margin: 0 0 8px;
+            font-family: var(--serif);
+            font-size: 21px;
+            font-weight: 400;
+            color: var(--tx)
+        }
+
+        .hier-layer .body p {
+            margin: 0;
+            font-size: 13.5px;
+            color: var(--tx2);
+            max-width: none
+        }
+
+        .hier-layer .body .stats {
+            margin-top: 10px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 14px;
+            font-family: var(--mono);
+            font-size: 11px;
+            color: var(--tx3)
+        }
+
+        .hier-layer .body .stats b {
+            color: var(--tx);
+            font-weight: 600
+        }
+
+        /* TIER CARDS (user budgets) */
+        .tier-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1px;
+            background: var(--rule);
+            margin: 24px 0;
+            border: 1px solid var(--rule2);
+            border-radius: 4px;
+            overflow: hidden
+        }
+
+        .tier-card {
+            background: var(--bg2);
+            padding: 28px 24px;
+            position: relative
+        }
+
+        .tier-card.std {
+            border-top: 3px solid var(--blue)
+        }
+
+        .tier-card.pwr {
+            border-top: 3px solid var(--plum)
+        }
+
+        .tier-card.vip {
+            border-top: 3px solid var(--gold)
+        }
+
+        .tier-card .cap-pill {
+            font-family: var(--mono);
+            font-size: 10px;
+            letter-spacing: .1em;
+            text-transform: uppercase;
+            padding: 3px 8px;
+            border-radius: 2px;
+            font-weight: 700;
+            display: inline-block;
+            margin-bottom: 14px
+        }
+
+        .tier-card.std .cap-pill {
+            background: var(--blueBg);
+            color: var(--blue)
+        }
+
+        .tier-card.pwr .cap-pill {
+            background: var(--plumBg);
+            color: var(--plum)
+        }
+
+        .tier-card.vip .cap-pill {
+            background: var(--goldBg);
+            color: var(--gold)
+        }
+
+        .tier-card h5 {
+            font-family: var(--serif);
+            font-size: 24px;
+            margin: 0 0 4px;
+            font-weight: 400;
+            line-height: 1.2
+        }
+
+        .tier-card .price {
+            font-family: var(--serif);
+            font-size: 48px;
+            line-height: .9;
+            margin: 18px 0 4px;
+            font-weight: 400
+        }
+
+        .tier-card.std .price {
+            color: var(--blue)
+        }
+
+        .tier-card.pwr .price {
+            color: var(--plum)
+        }
+
+        .tier-card.vip .price {
+            color: var(--gold)
+        }
+
+        .tier-card .price em {
+            font-family: var(--sans);
+            font-style: normal;
+            font-size: 14px;
+            color: var(--tx3);
+            letter-spacing: .05em;
+            margin-left: 6px
+        }
+
+        .tier-card .seats {
+            font-family: var(--mono);
+            font-size: 11px;
+            color: var(--tx3);
+            letter-spacing: .08em;
+            margin-bottom: 16px
+        }
+
+        .tier-card .seats b {
+            color: var(--tx);
+            font-weight: 600
+        }
+
+        .tier-card .desc {
+            font-size: 13.5px;
+            color: var(--tx2);
+            line-height: 1.55;
+            margin: 12px 0
+        }
+
+        .tier-card .fallback {
+            margin-top: 14px;
+            padding-top: 14px;
+            border-top: 1px solid var(--rule);
+            font-size: 12.5px;
+            color: var(--tx2)
+        }
+
+        .tier-card .fallback strong {
+            color: var(--accent2);
+            font-family: var(--mono);
+            font-size: 10.5px;
+            letter-spacing: .1em;
+            text-transform: uppercase;
+            display: block;
+            margin-bottom: 4px
+        }
+
+        /* COST CENTER DONUT (CSS only) */
+        .cc-section {
+            display: grid;
+            grid-template-columns: 1fr 1.4fr;
+            gap: 32px;
+            align-items: start;
+            margin: 24px 0
+        }
+
+        @media(max-width:820px) {
+            .cc-section {
+                grid-template-columns: 1fr
+            }
+        }
+
+        .donut-wrap {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 24px;
+            background: var(--bg2);
+            border: 1px solid var(--rule2);
+            border-radius: 6px
+        }
+
+        .donut {
+            width: 260px;
+            height: 260px;
+            border-radius: 50%;
+            background: conic-gradient(var(--accent) 0% 40%,
+                    var(--plum) 40% 60%,
+                    var(--blue) 60% 75%,
+                    var(--teal) 75% 87%,
+                    var(--gold) 87% 95%,
+                    var(--tx3) 95% 100%);
+            position: relative;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, .4);
+            margin-bottom: 20px
+        }
+
+        .donut::after {
+            content: '';
+            position: absolute;
+            inset: 24%;
+            background: var(--bg2);
+            border-radius: 50%
+        }
+
+        .donut-center {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            z-index: 2
+        }
+
+        .donut-center .v {
+            font-family: var(--serif);
+            font-size: 34px;
+            color: var(--accent);
+            line-height: 1
+        }
+
+        .donut-center .l {
+            font-family: var(--mono);
+            font-size: 9.5px;
+            letter-spacing: .15em;
+            color: var(--tx3);
+            text-transform: uppercase;
+            margin-top: 4px
+        }
+
+        .donut-legend {
+            font-size: 12.5px;
+            color: var(--tx2);
+            text-align: center;
+            font-family: var(--mono);
+            letter-spacing: .04em;
+            line-height: 1.6
+        }
+
+        .donut-legend strong {
+            color: var(--tx)
+        }
+
+        /* PHASE TIMELINE */
+        .timeline {
+            margin: 32px 0;
+            position: relative
+        }
+
+        .timeline::before {
+            content: '';
+            position: absolute;
+            left: 32px;
+            top: 36px;
+            bottom: 36px;
+            width: 2px;
+            background: linear-gradient(180deg, var(--blue), var(--plum), var(--gold), var(--red))
+        }
+
+        .phase {
+            display: grid;
+            grid-template-columns: 80px 1fr;
+            gap: 24px;
+            margin-bottom: 24px;
+            position: relative
+        }
+
+        .phase .dot {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: var(--bg);
+            border: 3px solid var(--accent);
+            margin-left: 24px;
+            margin-top: 8px;
+            position: relative;
+            z-index: 2;
+            box-shadow: 0 0 0 6px var(--bg)
+        }
+
+        .phase.p1 .dot {
+            border-color: var(--blue)
+        }
+
+        .phase.p2 .dot {
+            border-color: var(--plum)
+        }
+
+        .phase.p3 .dot {
+            border-color: var(--gold)
+        }
+
+        .phase.p4 .dot {
+            border-color: var(--red)
+        }
+
+        .phase-body {
+            background: var(--bg2);
+            border: 1px solid var(--rule2);
+            border-radius: 4px;
+            padding: 20px 22px
+        }
+
+        .phase-body .month {
+            font-family: var(--mono);
+            font-size: 10px;
+            letter-spacing: .15em;
+            text-transform: uppercase;
+            font-weight: 700;
+            margin-bottom: 4px
+        }
+
+        .phase.p1 .month {
+            color: var(--blue)
+        }
+
+        .phase.p2 .month {
+            color: var(--plum)
+        }
+
+        .phase.p3 .month {
+            color: var(--gold)
+        }
+
+        .phase.p4 .month {
+            color: var(--red)
+        }
+
+        .phase-body h5 {
+            font-family: var(--serif);
+            font-size: 21px;
+            margin: 0 0 4px;
+            font-weight: 400
+        }
+
+        .phase-body .goal {
+            font-style: italic;
+            color: var(--tx3);
+            font-size: 13px;
+            margin-bottom: 12px
+        }
+
+        .phase-body ul {
+            margin: 8px 0 0;
+            padding-left: 18px;
+            font-size: 13.5px;
+            color: var(--tx2);
+            line-height: 1.6
+        }
+
+        .phase-body ul li {
+            margin-bottom: 4px
+        }
+
+        /* CUTOFF FLOW */
+        .cutoff-flow {
+            margin: 24px 0;
+            background: var(--bg2);
+            border: 1px solid var(--rule2);
+            border-radius: 6px;
+            padding: 32px 24px;
+            overflow-x: auto
+        }
+
+        .flow-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 0;
+            align-items: stretch;
+            min-width: 720px
+        }
+
+        .flow-step {
+            position: relative;
+            padding: 18px 14px;
+            text-align: center
+        }
+
+        .flow-step:not(:last-child)::after {
+            content: '→';
+            position: absolute;
+            right: -10px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--accent);
+            font-family: var(--mono);
+            font-size: 20px;
+            font-weight: 700;
+            z-index: 2
+        }
+
+        .flow-step .pct {
+            font-family: var(--serif);
+            font-size: 36px;
+            line-height: 1;
+            font-weight: 400
+        }
+
+        .flow-step.s75 .pct {
+            color: var(--gold)
+        }
+
+        .flow-step.s90 .pct {
+            color: #e08a3b
+        }
+
+        .flow-step.s100 .pct {
+            color: var(--red)
+        }
+
+        .flow-step.byok .pct {
+            color: var(--teal);
+            font-size: 24px;
+            padding-top: 10px
+        }
+
+        .flow-step .pct-label {
+            font-family: var(--mono);
+            font-size: 10px;
+            letter-spacing: .12em;
+            text-transform: uppercase;
+            color: var(--tx3);
+            margin: 6px 0 12px
+        }
+
+        .flow-step .channels {
+            font-size: 12px;
+            color: var(--tx2);
+            line-height: 1.5
+        }
+
+        .flow-step .channels strong {
+            color: var(--tx);
+            font-family: var(--mono);
+            font-size: 10.5px;
+            letter-spacing: .08em;
+            display: block;
+            margin-bottom: 4px;
+            text-transform: uppercase
+        }
+
+        /* NOS TIER MAP */
+        .nos-tiers {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 14px;
+            margin: 20px 0
+        }
+
+        .nos-tier {
+            padding: 22px 20px;
+            border: 1px solid var(--rule2);
+            border-radius: 4px;
+            background: var(--bg2);
+            position: relative
+        }
+
+        .nos-tier.lt {
+            border-left: 3px solid var(--teal)
+        }
+
+        .nos-tier.vs {
+            border-left: 3px solid var(--gold)
+        }
+
+        .nos-tier.pw {
+            border-left: 3px solid var(--red)
+        }
+
+        .nos-tier h5 {
+            font-family: var(--serif);
+            font-size: 22px;
+            margin: 0 0 4px;
+            font-weight: 400
+        }
+
+        .nos-tier .who {
+            font-family: var(--mono);
+            font-size: 10.5px;
+            letter-spacing: .1em;
+            text-transform: uppercase;
+            color: var(--tx3);
+            margin-bottom: 14px
+        }
+
+        .nos-tier .models {
+            font-size: 13px;
+            color: var(--tx2);
+            line-height: 1.55;
+            margin-bottom: 14px
+        }
+
+        .nos-tier .models b {
+            color: var(--tx)
+        }
+
+        .nos-tier .meta {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            border-top: 1px solid var(--rule);
+            padding-top: 12px;
+            font-family: var(--mono);
+            font-size: 11px
+        }
+
+        .nos-tier .meta span {
+            display: block;
+            color: var(--tx3);
+            font-size: 9.5px;
+            letter-spacing: .12em;
+            text-transform: uppercase;
+            margin-bottom: 2px
+        }
+
+        .nos-tier .meta b {
+            color: var(--tx);
+            font-size: 12px;
+            font-weight: 600
+        }
+
+        /* SCENARIO TABLE */
+        .scenario {
+            margin: 20px 0 24px
+        }
+
+        .scenario .row {
+            display: grid;
+            grid-template-columns: 24px 1fr 100px 100px 100px 100px;
+            gap: 12px;
+            align-items: center;
+            padding: 14px 16px;
+            border-bottom: 1px solid var(--rule);
+            background: var(--bg2);
+            font-size: 13px
+        }
+
+        .scenario .row:first-child {
+            border-radius: 4px 4px 0 0;
+            border: 1px solid var(--rule2);
+            border-bottom: 1px solid var(--rule2)
+        }
+
+        .scenario .row:last-child {
+            border-radius: 0 0 4px 4px;
+            border: 1px solid var(--rule2);
+            border-top: none
+        }
+
+        .scenario .row:not(:first-child):not(:last-child) {
+            border-left: 1px solid var(--rule2);
+            border-right: 1px solid var(--rule2)
+        }
+
+        .scenario .head {
+            background: var(--bg3);
+            font-family: var(--mono);
+            font-size: 10px;
+            letter-spacing: .12em;
+            text-transform: uppercase;
+            color: var(--tx2);
+            font-weight: 600
+        }
+
+        .scenario .head .n {
+            text-align: right
+        }
+
+        .scenario .row .n {
+            text-align: right;
+            font-family: var(--mono);
+            font-size: 13px;
+            color: var(--tx);
+            font-feature-settings: 'tnum' 1
+        }
+
+        .scenario .row.recommended {
+            background: rgba(240, 90, 40, .08);
+            border-left: 3px solid var(--accent) !important
+        }
+
+        .scenario .row.recommended .total {
+            color: var(--accent);
+            font-weight: 700
+        }
+
+        .scenario .row .num {
+            font-family: var(--mono);
+            font-size: 11px;
+            color: var(--accent);
+            font-weight: 700
+        }
+
+        .scenario .row .desc {
+            color: var(--tx2);
+            line-height: 1.4
+        }
+
+        .scenario .row .desc small {
+            display: block;
+            color: var(--tx3);
+            font-size: 11px;
+            margin-top: 2px;
+            font-family: var(--mono)
+        }
+
+        @media(max-width:880px) {
+            .scenario .row {
+                grid-template-columns: 1fr;
+                gap: 6px
+            }
+
+            .scenario .head {
+                display: none
+            }
+
+            .scenario .row .n {
+                text-align: left
+            }
+        }
+
+        /* RISK TABLE */
+        .risks {
+            margin: 20px 0
+        }
+
+        .risk {
+            display: grid;
+            grid-template-columns: 50px 1fr 90px 90px;
+            gap: 14px;
+            align-items: start;
+            padding: 16px 20px;
+            border: 1px solid var(--rule2);
+            border-radius: 4px;
+            background: var(--bg2);
+            margin-bottom: 8px
+        }
+
+        .risk .id {
+            font-family: var(--mono);
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--accent);
+            padding-top: 1px
+        }
+
+        .risk .body h6 {
+            margin: 0 0 6px;
+            font-size: 14px;
+            color: var(--tx);
+            font-weight: 600
+        }
+
+        .risk .body p {
+            margin: 0;
+            font-size: 12.5px;
+            color: var(--tx2);
+            line-height: 1.5;
+            max-width: none
+        }
+
+        .risk .body p strong {
+            color: var(--accent2);
+            font-family: var(--mono);
+            font-size: 10px;
+            letter-spacing: .08em;
+            text-transform: uppercase;
+            display: inline-block;
+            margin-right: 4px
+        }
+
+        .risk .pill {
+            font-family: var(--mono);
+            font-size: 10px;
+            letter-spacing: .1em;
+            text-transform: uppercase;
+            padding: 4px 8px;
+            border-radius: 2px;
+            text-align: center;
+            font-weight: 700;
+            height: fit-content;
+            margin-top: 2px
+        }
+
+        .pill-h {
+            background: var(--redBg);
+            color: var(--red)
+        }
+
+        .pill-m {
+            background: var(--goldBg);
+            color: var(--gold)
+        }
+
+        .pill-l {
+            background: var(--tealBg);
+            color: var(--teal)
+        }
+
+        @media(max-width:680px) {
+            .risk {
+                grid-template-columns: 50px 1fr;
+                gap: 10px
+            }
+
+            .risk .pill {
+                display: inline-block;
+                margin-right: 6px
+            }
+        }
+
+        /* CADENCE CAL */
+        .cadence {
+            margin: 20px 0;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 12px
+        }
+
+        .cad-day {
+            background: var(--bg2);
+            border: 1px solid var(--rule2);
+            border-radius: 4px;
+            padding: 16px 18px;
+            position: relative
+        }
+
+        .cad-day::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 3px;
+            height: 36px;
+            background: var(--accent)
+        }
+
+        .cad-day .day {
+            font-family: var(--serif);
+            font-size: 30px;
+            line-height: 1;
+            color: var(--accent);
+            margin-bottom: 6px
+        }
+
+        .cad-day .day small {
+            font-family: var(--mono);
+            font-size: 10px;
+            color: var(--tx3);
+            letter-spacing: .1em;
+            margin-left: 6px;
+            text-transform: uppercase
+        }
+
+        .cad-day .act {
+            font-size: 13px;
+            color: var(--tx);
+            font-weight: 500;
+            line-height: 1.4;
+            margin-bottom: 6px
+        }
+
+        .cad-day .owner {
+            font-family: var(--mono);
+            font-size: 10px;
+            color: var(--tx3);
+            letter-spacing: .05em;
+            text-transform: uppercase
+        }
+
+        /* MONTHLY TRAJECTORY */
+        .trajectory {
+            margin: 18px 0 12px;
+            background: var(--bg2);
+            border: 1px solid var(--rule2);
+            border-radius: 4px;
+            overflow: hidden
+        }
+
+        .traj-head,
+        .traj-row {
+            display: grid;
+            grid-template-columns: 70px 130px 1fr 2.2fr 90px;
+            gap: 14px;
+            align-items: center;
+            padding: 11px 18px;
+            border-bottom: 1px solid var(--rule);
+            font-size: 13px
+        }
+
+        .traj-head {
+            background: var(--bg3);
+            font-family: var(--mono);
+            font-size: 10px;
+            letter-spacing: .12em;
+            text-transform: uppercase;
+            color: var(--tx2);
+            font-weight: 600
+        }
+
+        .traj-head>div {
+            color: var(--tx2)
+        }
+
+        .traj-row .t-month {
+            font-family: var(--mono);
+            font-weight: 600;
+            color: var(--tx);
+            font-size: 12.5px
+        }
+
+        .traj-row .t-license {
+            display: flex;
+            align-items: center;
+            gap: 6px
+        }
+
+        .traj-row .t-consum {
+            color: var(--tx2);
+            font-family: var(--mono);
+            font-size: 12px;
+            font-feature-settings: 'tnum' 1
+        }
+
+        .traj-row .t-consum small {
+            color: var(--tx3);
+            font-size: 10.5px;
+            margin-left: 4px
+        }
+
+        .traj-row .t-bar {
+            display: flex;
+            height: 24px;
+            background: var(--bg);
+            border-radius: 3px;
+            overflow: hidden;
+            position: relative
+        }
+
+        .traj-row .t-total {
+            font-family: var(--mono);
+            font-weight: 700;
+            color: var(--tx);
+            font-feature-settings: 'tnum' 1;
+            text-align: right;
+            font-size: 13.5px
+        }
+
+        .bar-seg {
+            height: 100%;
+            display: flex;
+            align-items: center;
+            padding: 0 6px;
+            font-family: var(--mono);
+            font-size: 10px;
+            font-weight: 600;
+            color: rgba(255, 255, 255, .92);
+            white-space: nowrap;
+            overflow: hidden
+        }
+
+        .bar-seg.seat {
+            background: linear-gradient(90deg, #3268b8, #4a8af4)
+        }
+
+        .bar-seg.addl {
+            background: linear-gradient(90deg, #a83a25, #e08a3b)
+        }
+
+        .bar-seg.byok {
+            background: linear-gradient(90deg, #1f7d6f, #2cb3a0)
+        }
+
+        .lic-pill {
+            font-family: var(--mono);
+            font-size: 9.5px;
+            letter-spacing: .1em;
+            text-transform: uppercase;
+            padding: 2px 7px;
+            border-radius: 2px;
+            font-weight: 700
+        }
+
+        .lic-pill.ent {
+            background: rgba(59, 186, 110, .15);
+            color: var(--green)
+        }
+
+        .lic-pill.biz {
+            background: rgba(240, 90, 40, .15);
+            color: var(--accent)
+        }
+
+        .downgr-tag {
+            font-family: var(--mono);
+            font-size: 9px;
+            color: var(--red);
+            letter-spacing: .08em
+        }
+
+        .traj-row.downgrade {
+            background: rgba(224, 70, 70, .04);
+            border-top: 2px solid var(--red);
+            border-bottom: 1px solid var(--rule)
+        }
+
+        .traj-row.total-row {
+            background: var(--bg3);
+            border-bottom: none;
+            font-weight: 600
+        }
+
+        .traj-row.total-row .t-month {
+            color: var(--accent)
+        }
+
+        .traj-legend {
+            display: flex;
+            gap: 24px;
+            font-family: var(--mono);
+            font-size: 10.5px;
+            color: var(--tx2);
+            margin: 0 0 24px;
+            padding: 0 6px;
+            letter-spacing: .04em
+        }
+
+        .traj-legend .leg {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 1px;
+            margin-right: 6px;
+            vertical-align: middle
+        }
+
+        .traj-legend .leg.seat {
+            background: linear-gradient(90deg, #3268b8, #4a8af4)
+        }
+
+        .traj-legend .leg.addl {
+            background: linear-gradient(90deg, #a83a25, #e08a3b)
+        }
+
+        .traj-legend .leg.byok {
+            background: linear-gradient(90deg, #1f7d6f, #2cb3a0)
+        }
+
+        @media(max-width:880px) {
+            .traj-head {
+                display: none
+            }
+
+            .traj-row {
+                grid-template-columns: 1fr;
+                gap: 6px;
+                padding: 14px 18px
+            }
+
+            .traj-row .t-bar {
+                height: 22px
+            }
+        }
+
+        /* CALLOUT */
+        .callout {
+            margin: 20px 0;
+            padding: 18px 22px;
+            background: var(--bg3);
+            border-left: 3px solid var(--accent);
+            border-radius: 0 4px 4px 0;
+            font-size: 14px
+        }
+
+        .callout .label {
+            font-family: var(--mono);
+            font-size: 10px;
+            letter-spacing: .2em;
+            text-transform: uppercase;
+            color: var(--accent);
+            font-weight: 700;
+            margin-bottom: 6px
+        }
+
+        .callout p {
+            margin: 0;
+            color: var(--tx2)
+        }
+
+        /* CAVEATS */
+        .caveats {
+            background: var(--bg2);
+            border: 1px solid var(--rule2);
+            border-radius: 4px;
+            padding: 32px 28px;
+            margin: 32px 0
+        }
+
+        .caveats h3 {
+            margin-top: 0;
+            color: var(--accent)
+        }
+
+        .caveats ul {
+            margin: 0;
+            padding-left: 18px
+        }
+
+        .caveats li {
+            font-size: 14px;
+            margin-bottom: 12px;
+            color: var(--tx2);
+            line-height: 1.55
+        }
+
+        .caveats li strong {
+            color: var(--tx)
+        }
+
+        /* TABLE WRAP for generic tables */
+        .tw {
+            margin: 20px 0 24px;
+            border: 1px solid var(--rule2);
+            border-radius: 4px;
+            overflow-x: auto;
+            background: var(--bg2)
+        }
+
+        .tw::-webkit-scrollbar {
+            height: 8px
+        }
+
+        .tw::-webkit-scrollbar-track {
+            background: var(--bg3)
+        }
+
+        .tw::-webkit-scrollbar-thumb {
+            background: var(--tx3);
+            border-radius: 4px
+        }
+
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            min-width: 600px;
+            font-size: 13px
+        }
+
+        thead {
+            background: var(--bg3)
+        }
+
+        th {
+            text-align: left;
+            padding: 10px 14px;
+            font-family: var(--mono);
+            font-size: 10px;
+            letter-spacing: .12em;
+            text-transform: uppercase;
+            color: var(--tx2);
+            font-weight: 600;
+            border-bottom: 2px solid var(--rule2);
+            white-space: nowrap
+        }
+
+        td {
+            padding: 10px 14px;
+            border-bottom: 1px solid var(--rule);
+            vertical-align: top;
+            line-height: 1.45;
+            color: var(--tx2)
+        }
+
+        tbody tr:hover {
+            background: rgba(240, 90, 40, .04)
+        }
+
+        td b {
+            color: var(--tx)
+        }
+
+        td .n {
+            font-family: var(--mono);
+            font-size: 12px;
+            white-space: nowrap;
+            font-feature-settings: 'tnum' 1
+        }
+
+        /* CHECKLIST */
+        .checklist {
+            margin: 18px 0;
+            padding: 20px 24px;
+            background: var(--bg2);
+            border: 1px solid var(--rule2);
+            border-radius: 4px
+        }
+
+        .checklist h6 {
+            font-family: var(--mono);
+            font-size: 11px;
+            letter-spacing: .15em;
+            text-transform: uppercase;
+            color: var(--accent);
+            margin: 0 0 14px;
+            font-weight: 700
+        }
+
+        .checklist ul {
+            margin: 0;
+            padding: 0;
+            list-style: none
+        }
+
+        .checklist li {
+            padding: 6px 0 6px 28px;
+            position: relative;
+            font-size: 13.5px;
+            color: var(--tx2);
+            line-height: 1.5;
+            border-bottom: 1px dashed var(--rule)
+        }
+
+        .checklist li:last-child {
+            border-bottom: none
+        }
+
+        .checklist li::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 11px;
+            width: 14px;
+            height: 14px;
+            border: 1.5px solid var(--rule2);
+            border-radius: 2px;
+            background: var(--bg)
+        }
+
+        .checklist li b {
+            color: var(--tx);
+            font-weight: 600
+        }
+
+        /* FOOTER */
+        footer {
+            padding: 48px 0 64px;
+            border-top: 1px solid var(--rule);
+            margin-top: 48px;
+            font-size: 12px;
+            color: var(--tx3);
+            display: flex;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 24px
+        }
+
+        footer .colophon {
+            max-width: 500px;
+            line-height: 1.7
+        }
+
+        /* Animations */
+        @keyframes fadeUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px)
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0)
+            }
+        }
+
+        .hero h1,
+        .hero .deck,
+        .headline-numbers {
+            animation: fadeUp .6s ease-out backwards
+        }
+
+        .hero .deck {
+            animation-delay: .1s
+        }
+
+        .headline-numbers {
+            animation-delay: .2s
+        }
+
+        /* ===== CALCULATOR ===== */
+        .calc-block {
+            margin-top: 22px;
+            background: var(--bg2);
+            border: 1px solid var(--rule2);
+            border-radius: 6px;
+            padding: 24px 26px
+        }
+
+        .calc-block-h {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            margin: 0 0 18px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid var(--rule);
+            flex-wrap: wrap;
+            gap: 10px
+        }
+
+        .calc-block-h h4 {
+            font-family: var(--serif);
+            font-size: 20px;
+            margin: 0;
+            font-weight: 400;
+            color: var(--tx)
+        }
+
+        .calc-block-h h4 i {
+            font-style: italic;
+            color: var(--accent2)
+        }
+
+        .calc-block-h .tag {
+            font-family: var(--mono);
+            font-size: 10px;
+            letter-spacing: .18em;
+            text-transform: uppercase;
+            color: var(--accent);
+            font-weight: 700
+        }
+
+        .calc-cols {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px
+        }
+
+        @media(max-width:900px) {
+            .calc-cols {
+                grid-template-columns: 1fr
+            }
+        }
+
+        /* Input rows */
+        .calc-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 8px 0;
+            border-bottom: 1px dashed var(--rule)
+        }
+
+        .calc-row:last-child {
+            border-bottom: none
+        }
+
+        .calc-row label {
+            flex: 1;
+            font-size: 13px;
+            color: var(--tx2)
+        }
+
+        .calc-row label small {
+            display: block;
+            font-family: var(--mono);
+            font-size: 10px;
+            color: var(--tx3);
+            letter-spacing: .04em;
+            margin-top: 2px;
+            text-transform: none
+        }
+
+        .calc-row .inp-wrap {
+            flex: 0 0 auto;
+            display: flex;
+            align-items: center;
+            gap: 8px
+        }
+
+        /* Number input with prefix */
+        .inp-num {
+            display: flex;
+            align-items: center;
+            background: var(--bg);
+            border: 1px solid var(--rule2);
+            border-radius: 3px;
+            overflow: hidden;
+            transition: .15s
+        }
+
+        .inp-num:focus-within {
+            border-color: var(--accent)
+        }
+
+        .inp-num .pre {
+            padding: 0 8px;
+            font-family: var(--mono);
+            font-size: 12px;
+            color: var(--tx3);
+            border-right: 1px solid var(--rule2);
+            height: 30px;
+            display: flex;
+            align-items: center;
+            background: var(--bg3)
+        }
+
+        .inp-num input {
+            background: transparent;
+            border: none;
+            color: var(--tx);
+            font-family: var(--mono);
+            font-size: 13px;
+            padding: 6px 10px;
+            width: 90px;
+            outline: none;
+            font-feature-settings: 'tnum' 1;
+            text-align: right
+        }
+
+        .inp-num input::-webkit-outer-spin-button,
+        .inp-num input::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0
+        }
+
+        .inp-num.w-lg input {
+            width: 110px
+        }
+
+        .inp-num.w-sm input {
+            width: 70px
+        }
+
+        .inp-num.w-xl input {
+            width: 140px
+        }
+
+        /* Segmented buttons (plan toggle) */
+        .seg {
+            display: inline-flex;
+            background: var(--bg3);
+            border-radius: 3px;
+            padding: 2px;
+            gap: 2px
+        }
+
+        .seg button {
+            background: transparent;
+            border: none;
+            color: var(--tx2);
+            font-family: var(--mono);
+            font-size: 10.5px;
+            letter-spacing: .1em;
+            text-transform: uppercase;
+            padding: 7px 14px;
+            cursor: pointer;
+            border-radius: 2px;
+            font-weight: 600;
+            transition: .12s
+        }
+
+        .seg button:hover {
+            color: var(--tx)
+        }
+
+        .seg button.on {
+            background: var(--accent);
+            color: #fff
+        }
+
+        /* Checkbox */
+        .chk {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            font-size: 13px;
+            color: var(--tx2);
+            user-select: none
+        }
+
+        .chk input[type=checkbox] {
+            accent-color: var(--accent);
+            width: 16px;
+            height: 16px;
+            cursor: pointer
+        }
+
+        /* Select dropdown */
+        .sel {
+            background: var(--bg);
+            border: 1px solid var(--rule2);
+            border-radius: 3px;
+            color: var(--tx);
+            font-family: var(--mono);
+            font-size: 12px;
+            padding: 6px 28px 6px 10px;
+            cursor: pointer;
+            outline: none;
+            appearance: none;
+            -webkit-appearance: none;
+            background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 6'><path d='M1 1l4 4 4-4' stroke='%23a8a49c' stroke-width='1.4' fill='none'/></svg>");
+            background-repeat: no-repeat;
+            background-position: right 10px center;
+            background-size: 10px
+        }
+
+        .sel:focus {
+            border-color: var(--accent)
+        }
+
+        /* Range slider */
+        input[type=range] {
+            -webkit-appearance: none;
+            appearance: none;
+            flex: 1;
+            height: 6px;
+            background: var(--bg3);
+            border-radius: 3px;
+            outline: none;
+            cursor: pointer
+        }
+
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: var(--accent);
+            cursor: pointer;
+            border: 2px solid var(--bg);
+            box-shadow: 0 1px 4px rgba(0, 0, 0, .4)
+        }
+
+        input[type=range]::-moz-range-thumb {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: var(--accent);
+            cursor: pointer;
+            border: 2px solid var(--bg)
+        }
+
+        /* Calc KPI cards */
+        .calc-kpis {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 8px
+        }
+
+        .calc-kpi {
+            background: var(--bg3);
+            border: 1px solid var(--rule);
+            border-radius: 4px;
+            padding: 12px 14px
+        }
+
+        .calc-kpi-lbl {
+            font-family: var(--mono);
+            font-size: 9px;
+            letter-spacing: .16em;
+            text-transform: uppercase;
+            color: var(--tx3);
+            margin-bottom: 5px;
+            font-weight: 600
+        }
+
+        .calc-kpi-val {
+            font-family: var(--serif);
+            font-size: 24px;
+            line-height: 1;
+            color: var(--tx);
+            font-feature-settings: 'tnum' 1
+        }
+
+        .calc-kpi-val.accent {
+            color: var(--accent)
+        }
+
+        .calc-kpi-val.green {
+            color: var(--green)
+        }
+
+        .calc-kpi-val.red {
+            color: var(--red)
+        }
+
+        .calc-kpi-val.gold {
+            color: var(--gold)
+        }
+
+        .calc-kpi-sub {
+            font-family: var(--mono);
+            font-size: 9.5px;
+            color: var(--tx3);
+            margin-top: 3px;
+            letter-spacing: .04em
+        }
+
+        /* Presets */
+        .calc-presets {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+            margin-bottom: 14px
+        }
+
+        .calc-presets button {
+            background: var(--bg3);
+            border: 1px solid var(--rule2);
+            color: var(--tx2);
+            font-family: var(--mono);
+            font-size: 9.5px;
+            letter-spacing: .1em;
+            text-transform: uppercase;
+            padding: 5px 10px;
+            border-radius: 3px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: .12s
+        }
+
+        .calc-presets button:hover {
+            border-color: var(--accent);
+            color: var(--accent)
+        }
+
+        /* CC budget mini-grid */
+        .cc-input-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 6px
+        }
+
+        @media(max-width:600px) {
+            .cc-input-grid {
+                grid-template-columns: 1fr
+            }
+        }
+
+        /* Viz bar */
+        .calc-viz {
+            margin-top: 18px;
+            background: var(--bg3);
+            border: 1px solid var(--rule);
+            border-radius: 6px;
+            padding: 18px 20px
+        }
+
+        .calc-viz-head {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            margin-bottom: 10px;
+            flex-wrap: wrap;
+            gap: 8px
+        }
+
+        .calc-viz-head h5 {
+            font-family: var(--mono);
+            font-size: 11px;
+            letter-spacing: .14em;
+            text-transform: uppercase;
+            color: var(--tx2);
+            font-weight: 700;
+            margin: 0
+        }
+
+        .calc-viz-head .ceil-info {
+            font-family: var(--mono);
+            font-size: 11px;
+            color: var(--tx3)
+        }
+
+        .calc-viz-head .ceil-info b {
+            color: var(--tx)
+        }
+
+        .calc-viz-bar {
+            display: flex;
+            height: 40px;
+            background: var(--bg);
+            border-radius: 4px;
+            overflow: hidden;
+            border: 1px solid var(--rule)
+        }
+
+        .calc-viz-seg {
+            height: 100%;
+            display: flex;
+            align-items: center;
+            padding: 0 10px;
+            font-family: var(--mono);
+            font-size: 11px;
+            font-weight: 700;
+            color: #fff;
+            letter-spacing: .04em;
+            white-space: nowrap;
+            overflow: hidden;
+            transition: width .25s ease-out
+        }
+
+        .calc-viz-seg.s-pool {
+            background: linear-gradient(90deg, #1f7d6f, #2cb3a0)
+        }
+
+        .calc-viz-seg.s-add {
+            background: linear-gradient(90deg, #a83a25, #e08a3b)
+        }
+
+        .calc-viz-seg.s-blk {
+            background: linear-gradient(90deg, #9a2727, #e04646)
+        }
+
+        .calc-viz-seg.s-room {
+            background: var(--bg3);
+            color: var(--tx3);
+            border-left: 1px dashed var(--rule2)
+        }
+
+        .calc-legend {
+            display: flex;
+            gap: 18px;
+            margin-top: 10px;
+            font-family: var(--mono);
+            font-size: 10.5px;
+            color: var(--tx2);
+            flex-wrap: wrap
+        }
+
+        .calc-legend .lg {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 1px;
+            margin-right: 6px;
+            vertical-align: middle
+        }
+
+        .calc-legend .lg.l-pool {
+            background: linear-gradient(90deg, #1f7d6f, #2cb3a0)
+        }
+
+        .calc-legend .lg.l-add {
+            background: linear-gradient(90deg, #a83a25, #e08a3b)
+        }
+
+        .calc-legend .lg.l-blk {
+            background: var(--red)
+        }
+
+        .calc-legend .lg.l-room {
+            background: var(--bg3);
+            border: 1px solid var(--rule2)
+        }
+
+        /* CC status grid (per-CC overage state) */
+        .cc-status-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 8px;
+            margin-top: 14px
+        }
+
+        .cc-status-card {
+            background: var(--bg3);
+            border: 1px solid var(--rule);
+            border-radius: 4px;
+            padding: 12px 14px
+        }
+
+        .cc-status-card .nm {
+            font-family: var(--mono);
+            font-size: 10.5px;
+            letter-spacing: .06em;
+            color: var(--tx2);
+            margin-bottom: 6px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px
+        }
+
+        .cc-status-card .nm b {
+            color: var(--tx)
+        }
+
+        .cc-status-card .mtr {
+            height: 6px;
+            background: var(--bg);
+            border-radius: 3px;
+            overflow: hidden;
+            margin-bottom: 5px
+        }
+
+        .cc-status-card .mtr-fill {
+            height: 100%;
+            transition: width .25s ease-out
+        }
+
+        .cc-status-card .mtr-fill.over {
+            background: var(--red) !important
+        }
+
+        .cc-status-card .mtr-info {
+            font-family: var(--mono);
+            font-size: 10px;
+            color: var(--tx3);
+            display: flex;
+            justify-content: space-between
+        }
+
+        .cc-status-card .mtr-info b {
+            color: var(--tx)
+        }
+
+        .cc-c-1 .mtr-fill {
+            background: var(--accent)
+        }
+
+        .cc-c-2 .mtr-fill {
+            background: var(--plum)
+        }
+
+        .cc-c-3 .mtr-fill {
+            background: var(--blue)
+        }
+
+        .cc-c-4 .mtr-fill {
+            background: var(--teal)
+        }
+
+        .cc-c-5 .mtr-fill {
+            background: var(--gold)
+        }
+
+        .cc-c-6 .mtr-fill {
+            background: var(--tx3)
+        }
+
+        /* User test cards with cost-center */
+        .utest-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 14px;
+            margin-top: 14px
+        }
+
+        @media(max-width:780px) {
+            .utest-grid {
+                grid-template-columns: 1fr
+            }
+        }
+
+        .utest {
+            background: var(--bg3);
+            border: 1px solid var(--rule);
+            border-radius: 6px;
+            padding: 20px 22px
+        }
+
+        .utest.std {
+            border-left: 3px solid var(--blue)
+        }
+
+        .utest.pwr {
+            border-left: 3px solid var(--plum)
+        }
+
+        .utest h5 {
+            font-family: var(--serif);
+            font-size: 19px;
+            margin: 0 0 4px;
+            font-weight: 400
+        }
+
+        .utest .who {
+            font-family: var(--mono);
+            font-size: 10.5px;
+            letter-spacing: .06em;
+            color: var(--tx3);
+            margin-bottom: 14px
+        }
+
+        .utest .ctrls {
+            margin-bottom: 12px
+        }
+
+        .utest .ctrls .calc-row {
+            padding: 6px 0
+        }
+
+        .utest .meter {
+            height: 6px;
+            background: var(--bg);
+            border-radius: 3px;
+            margin-top: 6px;
+            overflow: hidden
+        }
+
+        .utest .meter-fill {
+            height: 100%;
+            transition: width .25s ease-out
+        }
+
+        .utest.std .meter-fill {
+            background: linear-gradient(90deg, #3268b8, #4a8af4)
+        }
+
+        .utest.pwr .meter-fill {
+            background: linear-gradient(90deg, #9a4ba8, #b35dcc)
+        }
+
+        .utest .meter-fill.over {
+            background: linear-gradient(90deg, #9a2727, #e04646) !important
+        }
+
+        .utest .gates {
+            margin-top: 14px;
+            display: grid;
+            gap: 6px
+        }
+
+        .utest .gate {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 12px;
+            background: var(--bg);
+            border-radius: 3px;
+            font-size: 12px;
+            color: var(--tx2);
+            font-family: var(--mono);
+            font-feature-settings: 'tnum' 1
+        }
+
+        .utest .gate.pass {
+            border-left: 2px solid var(--green)
+        }
+
+        .utest .gate.fail {
+            border-left: 2px solid var(--red);
+            background: rgba(224, 70, 70, .06)
+        }
+
+        .utest .gate .tick {
+            font-family: var(--sans);
+            font-weight: 700;
+            font-size: 13px;
+            flex-shrink: 0;
+            width: 14px
+        }
+
+        .utest .gate.pass .tick {
+            color: var(--green)
+        }
+
+        .utest .gate.fail .tick {
+            color: var(--red)
+        }
+
+        .utest .gate .lbl {
+            flex: 1;
+            color: var(--tx)
+        }
+
+        .utest .gate .detail {
+            color: var(--tx3);
+            font-size: 10.5px
+        }
+
+        .utest .gate.fail .detail {
+            color: var(--red)
+        }
+
+        .utest .final {
+            margin-top: 14px;
+            padding-top: 14px;
+            border-top: 1px dashed var(--rule);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-family: var(--mono);
+            font-size: 11px;
+            color: var(--tx2)
+        }
+
+        .utest .pill-final {
+            font-family: var(--mono);
+            font-size: 10.5px;
+            font-weight: 700;
+            letter-spacing: .1em;
+            text-transform: uppercase;
+            padding: 5px 10px;
+            border-radius: 3px
+        }
+
+        .utest .pill-final.ok {
+            background: var(--greenBg);
+            color: var(--green)
+        }
+
+        .utest .pill-final.bad {
+            background: var(--redBg);
+            color: var(--red)
+        }
+
+        /* Calc summary block */
+        .calc-summary {
+            margin-top: 24px;
+            background: linear-gradient(135deg, var(--bg2), var(--bg3));
+            border: 1px solid var(--rule2);
+            border-radius: 6px;
+            padding: 22px 26px;
+            position: relative;
+            overflow: hidden
+        }
+
+        .calc-summary::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 4px;
+            background: linear-gradient(180deg, var(--accent), var(--accent2))
+        }
+
+        .calc-summary h5 {
+            font-family: var(--mono);
+            font-size: 10.5px;
+            letter-spacing: .2em;
+            text-transform: uppercase;
+            color: var(--accent);
+            margin: 0 0 12px;
+            font-weight: 700
+        }
+
+        .calc-sum-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 14px
+        }
+
+        .calc-sum-cell .lbl {
+            font-family: var(--mono);
+            font-size: 9.5px;
+            letter-spacing: .14em;
+            text-transform: uppercase;
+            color: var(--tx3);
+            margin-bottom: 5px
+        }
+
+        .calc-sum-cell .val {
+            font-family: var(--serif);
+            font-size: 30px;
+            line-height: 1;
+            color: var(--tx);
+            font-feature-settings: 'tnum' 1
+        }
+
+        .calc-sum-cell .val.green {
+            color: var(--green)
+        }
+
+        .calc-sum-cell .val.gold {
+            color: var(--gold)
+        }
+
+        .calc-sum-cell .val.red {
+            color: var(--red)
+        }
+
+        .calc-sum-cell .val.accent {
+            color: var(--accent)
+        }
+
+        .calc-sum-cell .sub {
+            font-family: var(--mono);
+            font-size: 9.5px;
+            color: var(--tx3);
+            margin-top: 4px;
+            letter-spacing: .04em
+        }
+
+
+        /* SIZING PLAYBOOK */
+        .sizing-list {
+            margin: 0;
+            padding: 0;
+            list-style: none;
+            counter-reset: siz
+        }
+
+        .sizing-list>li {
+            counter-increment: siz;
+            display: grid;
+            grid-template-columns: 54px 1fr;
+            gap: 14px;
+            padding: 14px 0;
+            border-bottom: 1px dashed var(--rule)
+        }
+
+        .sizing-list>li:last-child {
+            border-bottom: none
+        }
+
+        .sizing-list>li::before {
+            content: counter(siz);
+            grid-column: 1;
+            font-family: var(--serif);
+            font-style: italic;
+            font-size: 36px;
+            line-height: .9;
+            color: var(--accent);
+            font-weight: 400;
+            text-align: center
+        }
+
+        .sizing-list>li h5 {
+            font-family: var(--serif);
+            font-size: 18px;
+            margin: 0 0 4px;
+            font-weight: 400;
+            color: var(--tx);
+            line-height: 1.2
+        }
+
+        .sizing-list>li p {
+            font-size: 13px;
+            color: var(--tx2);
+            margin: 0;
+            line-height: 1.55;
+            max-width: none
+        }
+
+        .sizing-list>li p b {
+            color: var(--tx)
+        }
+
+        .sizing-list>li p code {
+            font-family: var(--mono);
+            font-size: 11.5px
+        }
+
+        .pitfall-list {
+            margin: 0;
+            padding-left: 18px
+        }
+
+        .pitfall-list li {
+            font-size: 13px;
+            color: var(--tx2);
+            line-height: 1.55;
+            margin-bottom: 8px
+        }
+
+        .pitfall-list li b {
+            color: var(--tx)
+        }
+
+        .pitfall-list li:last-child {
+            margin-bottom: 0
+        }
+
+        /* COST DASHBOARD */
+        .cost-dash {
+            position: sticky;
+            top: 0;
+            z-index: 20;
+            display: grid;
+            grid-template-columns: 2fr 1fr 1fr;
+            gap: 1px;
+            background: var(--rule2);
+            border: 1px solid var(--rule2);
+            border-radius: 6px;
+            overflow: hidden;
+            margin: 0 0 28px
+        }
+
+        @media(max-width:700px) {
+            .cost-dash {
+                grid-template-columns: 1fr;
+                position: static
+            }
+        }
+
+        .cost-dash-cell {
+            background: var(--bg2);
+            padding: 18px 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px
+        }
+
+        .cost-dash-cell.primary {
+            background: var(--bg3)
+        }
+
+        .cd-lbl {
+            font-family: var(--mono);
+            font-size: 9.5px;
+            letter-spacing: .2em;
+            text-transform: uppercase;
+            color: var(--tx3)
+        }
+
+        .cd-val {
+            font-family: var(--serif);
+            font-size: clamp(32px, 4vw, 52px);
+            line-height: 1;
+            font-weight: 400
+        }
+
+        .cd-val.green {
+            color: var(--green)
+        }
+
+        .cd-val.gold {
+            color: var(--gold)
+        }
+
+        .cd-val.red {
+            color: var(--red)
+        }
+
+        .cd-val.teal {
+            color: var(--teal)
+        }
+
+        .cd-sub {
+            font-family: var(--mono);
+            font-size: 10px;
+            color: var(--tx3);
+            letter-spacing: .04em
+        }
+
+        .cd-badge {
+            display: inline-block;
+            font-family: var(--mono);
+            font-size: 9px;
+            letter-spacing: .12em;
+            text-transform: uppercase;
+            font-weight: 700;
+            padding: 2px 7px;
+            border-radius: 2px;
+            margin-top: 6px;
+            align-self: flex-start
+        }
+
+        .cd-badge.green {
+            background: var(--greenBg);
+            color: var(--green)
+        }
+
+        .cd-badge.gold {
+            background: var(--goldBg);
+            color: var(--gold)
+        }
+
+        .cd-badge.red {
+            background: var(--redBg);
+            color: var(--red)
+        }
+
+        .cd-badge.teal {
+            background: var(--tealBg);
+            color: var(--teal)
+        }
+
+        /* Hero cell in summary — makes "Cash to GitHub" pop */
+        .calc-sum-cell.hero-cell .lbl {
+            font-size: 11px;
+            font-weight: 700
+        }
+
+        .calc-sum-cell.hero-cell .val {
+            font-family: var(--serif);
+            font-size: clamp(32px, 4vw, 52px);
+            line-height: 1;
+            font-weight: 400
+        }
+
+        /* teal KPI variant */
+        .calc-kpi-val.teal {
+            color: var(--teal)
+        }
+    </style>
+
+<body>
+    <div class="shell">
+
+        <!-- MASTHEAD -->
+        <header class="mast">
+            <div class="brand">PDX <em>·</em> Research Memo 015 · Budget <em>Calculator</em></div>
+            <div>13 May 2026 · NOS · Internal</div>
+        </header>
+
+        <!-- § 04 — CALCULATOR -->
+        <section id="s4">
+            <div class="sec-head">
+                <div class="num">§ 04</div>
+                <h2>Interactive <i>calculator</i></h2>
+            </div>
+            <p>Tweak every input — plan, seat count, all four budget caps, consumption — and see immediate impact on the
+                hierarchy. Calculator semantics follow the <strong>Copilot AI Credits Budget Authorization Spec</strong>
+                (PDX
+                015-spec): <strong>user budgets cap total monthly usage (pool + additional); enterprise and cost-center
+                    budgets
+                    cap only additional spend</strong>. The 3-gate user test in §04.4 reflects this asymmetry. Use this
+                section to
+                settle on the actual budget numbers before Phase 1 sign-off.</p>
+
+            <!-- COST DASHBOARD — live financial snapshot, updates with every input -->
+            <div class="cost-dash">
+                <div class="cost-dash-cell primary">
+                    <div class="cd-lbl">Monthly cost to GitHub</div>
+                    <div class="cd-val green" id="cd-cost">$27,300</div>
+                    <div class="cd-sub" id="cd-cost-sub">$27,300 seats · $0 overage</div>
+                    <span class="cd-badge green" id="cd-cost-badge">✓ within $50k zone</span>
+                </div>
+                <div class="cost-dash-cell">
+                    <div class="cd-lbl">Promo pool bonus</div>
+                    <div class="cd-val teal" id="cd-bonus">+$21,700</div>
+                    <div class="cd-sub" id="cd-bonus-sub">free credits vs standard</div>
+                    <span class="cd-badge teal" id="cd-bonus-badge">+$31/seat · promo active</span>
+                </div>
+                <div class="cost-dash-cell">
+                    <div class="cd-lbl">vs. April baseline</div>
+                    <div class="cd-val green" id="cd-savings">-$63,723</div>
+                    <div class="cd-sub">saved vs unbounded $91k</div>
+                    <span class="cd-badge green" id="cd-savings-pct">-70%</span>
+                </div>
+            </div>
+
+            <!-- 4.0 SIZING PLAYBOOK -->
+            <div class="calc-block">
+                <div class="calc-block-h">
+                    <h4>Sizing <i>playbook</i></h4>
+                    <span class="tag">§ 04.0 · the order to set budgets</span>
+                </div>
+                <p>Set budgets in this order, derived from the <em>Copilot AI Credits Budget Authorization Spec</em>.
+                    The two
+                    key facts that drive the playbook: (a) <b>user budgets cap total usage</b> (including pool
+                    consumption), while
+                    enterprise and cost-center budgets only gate additional spend; (b) <b>cost-center budgets are not
+                        quotas</b> —
+                    Scenario 6.3 in the spec demonstrates that the same configured CC budget can be active or inactive
+                    depending
+                    on how the shared pool was consumed earlier in the period.</p>
+
+                <ol class="sizing-list">
+                    <li>
+                        <div>
+                            <h5>Get visibility first</h5>
+                            <p>Run the PRU→credits conversion against last month's usage export. You need: total
+                                enterprise
+                                consumption, P90/P99 per-user consumption, which users are outliers, and which cost
+                                centers are heavy.
+                                Without this baseline, every other number is a guess.</p>
+                        </div>
+                    </li>
+                    <li>
+                        <div>
+                            <h5>Enterprise budget = tolerable monthly overage</h5>
+                            <p>This is the <b>top-level dollar lever</b>. Set to <code>$0</code> if you want the pool to
+                                be a hard
+                                ceiling. Otherwise, set it to whatever Finance will sign off on. Everything else
+                                operates within this
+                                guardrail (unless <code>ignoreEnterpriseBudget</code> is used for a specific cost
+                                center).</p>
+                        </div>
+                    </li>
+                    <li>
+                        <div>
+                            <h5>Cost-center budgets only if you need differential overage caps</h5>
+                            <p>If everyone in the org has the same overage tolerance, <b>skip cost centers entirely</b>
+                                — enterprise
+                                budget plus user budgets do the work. Use cost-center budgets when, say, Platform should
+                                be allowed more
+                                additional spend than Customer Engineering. <b>Don't expect them to behave like
+                                    quotas</b> (Scenario
+                                6.3).</p>
+                        </div>
+                    </li>
+                    <li>
+                        <div>
+                            <h5>Universal default user budget — generous to start</h5>
+                            <p>Rule-of-thumb: pick a value that covers <b>2–3× a typical user's observed monthly
+                                    draw</b>. This isn't
+                                your spend control — your enterprise budget is. This is your <b>fair-use control</b>.
+                                Setting it too low
+                                frustrates real work; too high lets one user drain the pool. <em>The default $200 below
+                                    sits at ~3× the
+                                    April P75 user.</em></p>
+                        </div>
+                    </li>
+                    <li>
+                        <div>
+                            <h5>Override individual budgets for known power users</h5>
+                            <p>Identify them from the usage export. Set them higher than the default —
+                                <code>$500</code>,
+                                <code>$1,000</code>, whatever makes sense given consumption history. <b>Mind the
+                                    10K-budget limit.</b>
+                                NOS is well under (1 + 6 + 1 + ~100 = 108 budgets).
+                            </p>
+                        </div>
+                    </li>
+                    <li>
+                        <div>
+                            <h5>Iterate at the end of month one</h5>
+                            <p>Pull the usage export, see who was blocked and why, see what was left on the table,
+                                adjust. <b>This is
+                                    going to be iterative</b> — usage patterns will shift as people learn the new Auto
+                                mode and as
+                                features evolve. Don't try to nail this on day one.</p>
+                        </div>
+                    </li>
+                </ol>
+
+                <div class="callout" style="margin-top:18px">
+                    <div class="label"
+                        style="font-family:var(--mono);font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--accent);font-weight:700;margin-bottom:6px">
+                        Worked example · simplified</div>
+                    <p style="margin:0;color:var(--tx2)">For the spec's reference 10-user / $190 pool / $310 enterprise
+                        budget
+                        setup: if observed P50 user draws $25/month and P90 draws $45/month, a universal default around
+                        <b>$60–$75</b> keeps the long tail covered while preventing a single user from solo-draining the
+                        $500 total.
+                        For NOS scaled up: pool $49k + enterprise cap $15k = $64k total. Divided across 700 seats ×
+                        safety factor
+                        1.3 ≈ $120/user theoretical max, but the P90 user shape recommends <b>~$200 universal
+                            default</b> in
+                        practice.
+                    </p>
+                </div>
+
+                <div class="callout"
+                    style="margin-top:8px;background:rgba(212,169,66,.06);border-left-color:var(--gold)">
+                    <div class="label"
+                        style="font-family:var(--mono);font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--gold);font-weight:700;margin-bottom:6px">
+                        Practical pitfalls to avoid</div>
+                    <ul class="pitfall-list">
+                        <li><b>Setting universal default = per-user license value</b> ($19 / $39, or $30 / $70 in promo)
+                            defeats the
+                            entire pooling benefit. That's what users <em>contribute</em> to the pool, not what they
+                            should be capped
+                            at.</li>
+                        <li><b>Setting cost-center budgets very low to act like ring-fenced quotas doesn't work</b> —
+                            see Scenario
+                            6.3 in the spec. Quotas don't exist in this model; only overage caps do.</li>
+                        <li><b>Forgetting that code completions and Next Edit Suggestions are free</b> — they don't
+                            consume credits
+                            and don't count toward any budget. Don't size around them.</li>
+                        <li><b>Forgetting that code review now consumes Actions minutes separately</b> — this is a
+                            different budget
+                            surface that you may need to revisit, especially at scale.</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- 4.1 PLAN & POOL -->
+            <div class="calc-block">
+                <div class="calc-block-h">
+                    <h4>Plan <i>&amp; pool</i></h4>
+                    <span class="tag">§ 04.1 · inputs determine pool</span>
+                </div>
+
+                <div class="calc-presets">
+                    <button data-preset="ent-promo">Enterprise + Promo (Jun–Aug)</button>
+                    <button data-preset="biz-promo">Business + Promo</button>
+                    <button data-preset="biz-std">Business standard (Sep+)</button>
+                    <button data-preset="ent-std">Enterprise standard</button>
+                </div>
+
+                <div class="calc-cols">
+                    <div>
+                        <div class="calc-row">
+                            <label>Number of seats <small>active users on Copilot</small></label>
+                            <div class="inp-wrap">
+                                <div class="inp-num w-sm"><span class="pre">#</span><input type="number" id="c-seats"
+                                        value="700" min="1" max="10000" step="50"></div>
+                            </div>
+                        </div>
+                        <div class="calc-row">
+                            <label>License plan <small>Business $19/seat · Enterprise $39/seat</small></label>
+                            <div class="inp-wrap">
+                                <div class="seg"><button class="c-plan" data-plan="business">Business</button><button
+                                        class="c-plan on" data-plan="enterprise">Enterprise</button></div>
+                            </div>
+                        </div>
+                        <div class="calc-row">
+                            <label>Promotional pricing <small>Jun–Aug 2026: Biz $30 · Ent $70 in credits</small></label>
+                            <div class="inp-wrap"><label class="chk"><input type="checkbox" id="c-promo"
+                                        checked><span>Promo
+                                        active</span></label></div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <div class="calc-kpis">
+                            <div class="calc-kpi">
+                                <div class="calc-kpi-lbl">Credits / user</div>
+                                <div class="calc-kpi-val accent" id="c-kpi-credits">$70</div>
+                                <div class="calc-kpi-sub" id="c-kpi-credits-sub">Enterprise promo</div>
+                            </div>
+                            <div class="calc-kpi">
+                                <div class="calc-kpi-lbl">Total pool</div>
+                                <div class="calc-kpi-val green" id="c-kpi-pool">$49,000</div>
+                                <div class="calc-kpi-sub" id="c-kpi-pool-sub">700 × $70</div>
+                            </div>
+                            <div class="calc-kpi">
+                                <div class="calc-kpi-lbl">Seat cost</div>
+                                <div class="calc-kpi-val" id="c-kpi-seat">$27,300</div>
+                                <div class="calc-kpi-sub" id="c-kpi-seat-sub">700 × $39 fixed</div>
+                            </div>
+                            <div class="calc-kpi">
+                                <div class="calc-kpi-lbl">Promo pool bonus</div>
+                                <div class="calc-kpi-val teal" id="c-kpi-promo-bonus">+$21,700</div>
+                                <div class="calc-kpi-sub" id="c-kpi-promo-bonus-sub">+$31/seat free credits</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 4.2 BUDGETS -->
+            <div class="calc-block">
+                <div class="calc-block-h">
+                    <h4>Budget <i>hierarchy</i></h4>
+                    <span class="tag">§ 04.2 · overage gates</span>
+                </div>
+
+                <div class="calc-cols">
+                    <div>
+                        <h4
+                            style="font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--accent);margin:4px 0 8px;font-weight:700">
+                            Enterprise budget</h4>
+                        <div class="calc-row">
+                            <label>Enterprise additional cap <small>Hard org ceiling on overage</small></label>
+                            <div class="inp-wrap">
+                                <div class="inp-num w-lg"><span class="pre">$</span><input type="number" id="c-ent-cap"
+                                        value="15000" min="0" step="500"></div>
+                            </div>
+                        </div>
+
+                        <h4
+                            style="font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--accent);margin:18px 0 8px;font-weight:700">
+                            Cost-center budgets (× 6)</h4>
+                        <div class="cc-input-grid">
+                            <div class="calc-row"><label><b style="color:var(--accent)">●</b> Inovação <small>31.3%
+                                        Apr</small></label>
+                                <div class="inp-wrap">
+                                    <div class="inp-num"><span class="pre">$</span><input type="number"
+                                            data-cc="inovacao" value="4000" min="0" step="50"></div>
+                                </div>
+                            </div>
+                            <div class="calc-row"><label><b style="color:var(--plum)">●</b> Operações <small>22.3%
+                                        Apr</small></label>
+                                <div class="inp-wrap">
+                                    <div class="inp-num"><span class="pre">$</span><input type="number"
+                                            data-cc="operacoes" value="2850" min="0" step="50"></div>
+                                </div>
+                            </div>
+                            <div class="calc-row"><label><b style="color:var(--blue)">●</b> Sistemas Inf. <small>14.8%
+                                        Apr</small></label>
+                                <div class="inp-wrap">
+                                    <div class="inp-num"><span class="pre">$</span><input type="number"
+                                            data-cc="sistemas" value="1900" min="0" step="50"></div>
+                                </div>
+                            </div>
+                            <div class="calc-row"><label><b style="color:var(--teal)">●</b> Redes <small>9.5%
+                                        Apr</small></label>
+                                <div class="inp-wrap">
+                                    <div class="inp-num"><span class="pre">$</span><input type="number" data-cc="redes"
+                                            value="1210" min="0" step="50"></div>
+                                </div>
+                            </div>
+                            <div class="calc-row"><label><b style="color:var(--gold)">●</b> AI &amp; Insight <small>5.0%
+                                        Apr</small></label>
+                                <div class="inp-wrap">
+                                    <div class="inp-num"><span class="pre">$</span><input type="number" data-cc="ai"
+                                            value="640" min="0" step="50"></div>
+                                </div>
+                            </div>
+                            <div class="calc-row"><label><b style="color:var(--tx3)">●</b> General <small>17.1%
+                                        Apr</small></label>
+                                <div class="inp-wrap">
+                                    <div class="inp-num"><span class="pre">$</span><input type="number"
+                                            data-cc="general" value="2200" min="0" step="50"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <h4
+                            style="font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--accent);margin:18px 0 8px;font-weight:700">
+                            User-level budgets</h4>
+                        <div class="calc-row">
+                            <label>Universal default <small>Caps each user's total usage (pool +
+                                    additional)</small></label>
+                            <div class="inp-wrap">
+                                <div class="inp-num"><span class="pre">$</span><input type="number" id="c-universal"
+                                        value="200" min="0" step="10"></div>
+                            </div>
+                        </div>
+                        <div class="calc-row">
+                            <label>Power users (individual override)<small>Caps each power user's total usage · ~100
+                                    manual
+                                    configs</small></label>
+                            <div class="inp-wrap" style="gap:6px">
+                                <div class="inp-num w-sm"><span class="pre">#</span><input type="number"
+                                        id="c-pwr-count" value="100" min="0" max="700" step="10"></div><span
+                                    style="font-family:var(--mono);font-size:11px;color:var(--tx3)">×</span>
+                                <div class="inp-num"><span class="pre">$</span><input type="number" id="c-pwr-budget"
+                                        value="1000" min="0" step="50"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <div class="calc-kpis">
+                            <div class="calc-kpi">
+                                <div class="calc-kpi-lbl">CC allocated</div>
+                                <div class="calc-kpi-val" id="c-kpi-cc-total">$12,800</div>
+                                <div class="calc-kpi-sub">Sum of 6 cost-centers</div>
+                            </div>
+                            <div class="calc-kpi">
+                                <div class="calc-kpi-lbl">Central reserve</div>
+                                <div class="calc-kpi-val gold" id="c-kpi-reserve">$2,200</div>
+                                <div class="calc-kpi-sub" id="c-kpi-reserve-sub">15% of cap</div>
+                            </div>
+                            <div class="calc-kpi">
+                                <div class="calc-kpi-lbl">Cash hard ceiling</div>
+                                <div class="calc-kpi-val red" id="c-kpi-ceiling">$42,300</div>
+                                <div class="calc-kpi-sub" id="c-kpi-ceiling-sub">seats + add cap</div>
+                            </div>
+                            <div class="calc-kpi">
+                                <div class="calc-kpi-lbl">Consumption ceiling</div>
+                                <div class="calc-kpi-val" id="c-kpi-consum-ceiling">$64,000</div>
+                                <div class="calc-kpi-sub">pool + add cap</div>
+                            </div>
+                            <div class="calc-kpi">
+                                <div class="calc-kpi-lbl">User envelope</div>
+                                <div class="calc-kpi-val" id="c-kpi-user-env">$80,000</div>
+                                <div class="calc-kpi-sub" id="c-kpi-user-env-sub">aggregate if all max</div>
+                            </div>
+                            <div class="calc-kpi">
+                                <div class="calc-kpi-lbl">Total budgets</div>
+                                <div class="calc-kpi-val" id="c-kpi-count">108</div>
+                                <div class="calc-kpi-sub">1 ent + 6 cc + 1 univ + N pwr</div>
+                            </div>
+                        </div>
+                        <div class="callout" id="c-alloc-note" style="display:none;margin-top:14px"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 4.3 SCENARIO -->
+            <div class="calc-block">
+                <div class="calc-block-h">
+                    <h4>Scenario <i>test · org consumption</i></h4>
+                    <span class="tag">§ 04.3 · pool then overage</span>
+                </div>
+                <p style="margin:0 0 14px;font-size:13px;color:var(--tx2)">Slide to set total org consumption (credits
+                    attempted). Cost-center overage is allocated proportionally to April PRU share. The CC status grid
+                    feeds the
+                    per-user blocking test below.</p>
+
+                <div class="calc-row">
+                    <label>Total org consumption attempted <small>credits, includes pool + overage</small></label>
+                    <div class="inp-wrap" style="flex:1;max-width:520px;gap:12px"><input type="range" id="c-consumption"
+                            min="0" max="100000" step="1000" value="40000" style="flex:1">
+                        <div class="inp-num w-lg"><span class="pre">$</span><input type="number" id="c-consumption-num"
+                                value="40000" min="0" max="200000" step="500"></div>
+                    </div>
+                </div>
+
+                <div class="calc-viz">
+                    <div class="calc-viz-head">
+                        <h5>Org breakdown</h5>
+                        <div class="ceil-info">Consumption ceiling: <b id="c-viz-ceiling">$64,000</b></div>
+                    </div>
+                    <div class="calc-viz-bar" id="c-viz-bar"></div>
+                    <div class="calc-legend">
+                        <span><span class="lg l-pool"></span> Pool used</span>
+                        <span><span class="lg l-add"></span> Additional spend</span>
+                        <span><span class="lg l-blk"></span> Blocked at enterprise</span>
+                        <span><span class="lg l-room"></span> Headroom</span>
+                    </div>
+                </div>
+
+                <h4
+                    style="font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--accent);margin:20px 0 8px;font-weight:700">
+                    Cost-center status</h4>
+                <p style="margin:0 0 8px;font-size:12.5px;color:var(--tx3)">Overage allocated proportionally to April
+                    PRU share
+                    — this is a <em>simplifying approximation</em>. Per the spec (Scenario 6.3), actual CC overage
+                    depends on the
+                    order in which the shared pool was consumed during the period. CCs in red are over cap; users in
+                    those CCs
+                    will be blocked at the CC gate even with personal ULB headroom.</p>
+                <div class="cc-status-grid" id="c-cc-status"></div>
+            </div>
+
+            <!-- 4.4 PER-USER BLOCKING -->
+            <div class="calc-block">
+                <div class="calc-block-h">
+                    <h4>Per-user <i>blocking · 3-gate check</i></h4>
+                    <span class="tag">§ 04.4 · individual test</span>
+                </div>
+                <p style="margin:0 0 8px;font-size:13px;color:var(--tx2)">Each user must pass <strong>three</strong>
+                    gates
+                    simultaneously. Failing any one means blocked. The crucial asymmetry from the spec: <strong>the
+                        user-level
+                        gate checks total monthly usage</strong> (pool + additional combined), while <strong>cost-center
+                        and
+                        enterprise gates only check the additional-spend portion</strong>. So a user can be blocked at
+                    the ULB gate
+                    even with significant pool remaining — and can be blocked at the CC gate even with significant
+                    personal ULB
+                    remaining (Scenario 6.3).</p>
+
+                <div class="utest-grid">
+                    <div class="utest std">
+                        <h5>Standard user</h5>
+                        <div class="who">Universal default ULB · ~600 seats</div>
+                        <div class="ctrls">
+                            <div class="calc-row"><label>Cost center</label>
+                                <div class="inp-wrap"><select class="sel" id="c-std-cc">
+                                        <option value="inovacao">Inovação</option>
+                                        <option value="operacoes">Operações</option>
+                                        <option value="sistemas">Sistemas de Informação</option>
+                                        <option value="redes">Redes</option>
+                                        <option value="ai">AI e Insight Mercado</option>
+                                        <option value="general">General</option>
+                                    </select></div>
+                            </div>
+                            <div class="calc-row"><label>Monthly consumption</label>
+                                <div class="inp-wrap">
+                                    <div class="inp-num"><span class="pre">$</span><input type="number"
+                                            id="c-std-consumed" value="150" min="0" step="10"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="meter">
+                            <div class="meter-fill" id="c-std-meter" style="width:70%"></div>
+                        </div>
+                        <div class="gates">
+                            <div class="gate pass" id="c-std-g-ulb"><span class="tick">✓</span><span
+                                    class="lbl">User-level
+                                    budget</span><span class="detail" id="c-std-g-ulb-d">$35 / $50</span></div>
+                            <div class="gate pass" id="c-std-g-cc"><span class="tick">✓</span><span
+                                    class="lbl">Cost-center
+                                    cap</span><span class="detail" id="c-std-g-cc-d">Inovação OK</span></div>
+                            <div class="gate pass" id="c-std-g-ent"><span class="tick">✓</span><span
+                                    class="lbl">Enterprise
+                                    cap</span><span class="detail" id="c-std-g-ent-d">OK</span></div>
+                        </div>
+                        <div class="final">
+                            <span>Final state</span>
+                            <span class="pill-final ok" id="c-std-final">Approved</span>
+                        </div>
+                    </div>
+
+                    <div class="utest pwr">
+                        <h5>Power user</h5>
+                        <div class="who">Individual ULB override · ~100 seats</div>
+                        <div class="ctrls">
+                            <div class="calc-row"><label>Cost center</label>
+                                <div class="inp-wrap"><select class="sel" id="c-pwr-cc">
+                                        <option value="inovacao">Inovação</option>
+                                        <option value="operacoes">Operações</option>
+                                        <option value="sistemas">Sistemas de Informação</option>
+                                        <option value="redes">Redes</option>
+                                        <option value="ai">AI e Insight Mercado</option>
+                                        <option value="general">General</option>
+                                    </select></div>
+                            </div>
+                            <div class="calc-row"><label>Monthly consumption</label>
+                                <div class="inp-wrap">
+                                    <div class="inp-num"><span class="pre">$</span><input type="number"
+                                            id="c-pwr-consumed" value="700" min="0" step="50"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="meter">
+                            <div class="meter-fill" id="c-pwr-meter" style="width:70%"></div>
+                        </div>
+                        <div class="gates">
+                            <div class="gate pass" id="c-pwr-g-ulb"><span class="tick">✓</span><span
+                                    class="lbl">User-level
+                                    budget</span><span class="detail" id="c-pwr-g-ulb-d">$350 / $500</span></div>
+                            <div class="gate pass" id="c-pwr-g-cc"><span class="tick">✓</span><span
+                                    class="lbl">Cost-center
+                                    cap</span><span class="detail" id="c-pwr-g-cc-d">Inovação OK</span></div>
+                            <div class="gate pass" id="c-pwr-g-ent"><span class="tick">✓</span><span
+                                    class="lbl">Enterprise
+                                    cap</span><span class="detail" id="c-pwr-g-ent-d">OK</span></div>
+                        </div>
+                        <div class="final">
+                            <span>Final state</span>
+                            <span class="pill-final ok" id="c-pwr-final">Approved</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 4.5 SUMMARY -->
+            <div class="calc-summary">
+                <h5>Monthly outcome at current configuration</h5>
+                <div class="calc-sum-grid">
+                    <div class="calc-sum-cell">
+                        <div class="lbl">Seat fees</div>
+                        <div class="val" id="c-sum-seat">$27,300</div>
+                        <div class="sub">paid regardless</div>
+                    </div>
+                    <div class="calc-sum-cell">
+                        <div class="lbl">+ Additional spend</div>
+                        <div class="val gold" id="c-sum-add">$0</div>
+                        <div class="sub" id="c-sum-add-sub">at $40k consumption</div>
+                    </div>
+                    <div class="calc-sum-cell hero-cell">
+                        <div class="lbl">= Cash to GitHub</div>
+                        <div class="val accent" id="c-sum-cash">$27,300</div>
+                        <div class="sub" id="c-sum-cash-sub">vs $50k working zone</div>
+                    </div>
+                    <div class="calc-sum-cell">
+                        <div class="lbl">Blocked work</div>
+                        <div class="val green" id="c-sum-blk">$0</div>
+                        <div class="sub" id="c-sum-blk-sub">consumption denied</div>
+                    </div>
+                    <div class="calc-sum-cell">
+                        <div class="lbl">Cost per seat</div>
+                        <div class="val" id="c-sum-per-seat">$39</div>
+                        <div class="sub">cash out per active seat</div>
+                    </div>
+                    <div class="calc-sum-cell">
+                        <div class="lbl">vs. April baseline</div>
+                        <div class="val green" id="c-sum-savings">-$63,723</div>
+                        <div class="sub" id="c-sum-savings-sub">-70% vs $91k Apr</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+
+    </div>
+    <script>
+        // =============================================================================
+        // NOS Budget Calculator — Embedded Interactive Tool
+        // =============================================================================
+        (function () {
+            const $ = id => document.getElementById(id);
+            const $$ = sel => document.querySelectorAll(sel);
+            const fmt = n => '$' + Math.round(n).toLocaleString();
+
+            // April PRU shares per cost center
+            const ccShares = {
+                inovacao: 0.313, operacoes: 0.223, sistemas: 0.148,
+                redes: 0.095, ai: 0.050, general: 0.171
+            };
+            const ccLabels = {
+                inovacao: { name: 'Inovação', cls: 1 },
+                operacoes: { name: 'Operações', cls: 2 },
+                sistemas: { name: 'Sistemas de Informação', cls: 3 },
+                redes: { name: 'Redes', cls: 4 },
+                ai: { name: 'AI e Insight Mercado', cls: 5 },
+                general: { name: 'General', cls: 6 }
+            };
+
+            let state = { isEnterprise: true, isPromo: true };
+
+            // Plan toggle
+            $$('.c-plan').forEach(btn => {
+                btn.addEventListener('click', e => {
+                    $$('.c-plan').forEach(b => b.classList.remove('on'));
+                    e.currentTarget.classList.add('on');
+                    state.isEnterprise = e.currentTarget.dataset.plan === 'enterprise';
+                    recalc();
+                });
+            });
+
+            $('c-promo').addEventListener('change', e => {
+                state.isPromo = e.target.checked;
+                recalc();
+            });
+
+            // Presets
+            $$('.calc-presets button').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const p = btn.dataset.preset;
+                    const plan = p.startsWith('ent') ? 'enterprise' : 'business';
+                    const promo = p.endsWith('promo');
+                    $$('.c-plan').forEach(b => b.classList.toggle('on', b.dataset.plan === plan));
+                    state.isEnterprise = plan === 'enterprise';
+                    $('c-promo').checked = promo;
+                    state.isPromo = promo;
+                    recalc();
+                });
+            });
+
+            // Sync slider and number for consumption
+            $('c-consumption').addEventListener('input', e => {
+                $('c-consumption-num').value = e.target.value;
+                recalc();
+            });
+            $('c-consumption-num').addEventListener('input', e => {
+                const v = Math.min(+e.target.value, +$('c-consumption').max);
+                $('c-consumption').value = v;
+                recalc();
+            });
+
+            // Wire all other inputs
+            ['c-seats', 'c-ent-cap', 'c-universal', 'c-pwr-count', 'c-pwr-budget',
+                'c-std-consumed', 'c-pwr-consumed', 'c-std-cc', 'c-pwr-cc'].forEach(id => {
+                    const el = $(id);
+                    if (el) el.addEventListener('input', recalc);
+                    if (el) el.addEventListener('change', recalc);
+                });
+            $$('input[data-cc]').forEach(el => el.addEventListener('input', recalc));
+
+            function recalc() {
+                const seats = +$('c-seats').value || 0;
+                const isEnt = state.isEnterprise;
+                const isPromo = state.isPromo;
+
+                const seatFee = isEnt ? 39 : 19;
+                const creditsPerUser = isEnt ? (isPromo ? 70 : 39) : (isPromo ? 30 : 19);
+                const totalPool = seats * creditsPerUser;
+                const totalSeatCost = seats * seatFee;
+
+                const entCap = +$('c-ent-cap').value || 0;
+                const ccBudgets = {};
+                $$('input[data-cc]').forEach(el => { ccBudgets[el.dataset.cc] = +el.value || 0; });
+                const ccTotal = Object.values(ccBudgets).reduce((a, b) => a + b, 0);
+                const reserve = entCap - ccTotal;
+
+                const universalBudget = +$('c-universal').value || 0;
+                const powerCount = +$('c-pwr-count').value || 0;
+                const powerBudget = +$('c-pwr-budget').value || 0;
+
+                const cashCeiling = totalSeatCost + entCap;
+                const consumCeiling = totalPool + entCap;
+                const userEnvelope = (seats - powerCount) * universalBudget + powerCount * powerBudget;
+                const budgetCount = 1 + 6 + 1 + powerCount;
+
+                // Scenario
+                const consumption = +$('c-consumption').value || 0;
+                const poolUsed = Math.min(consumption, totalPool);
+                const overageAttempted = Math.max(0, consumption - totalPool);
+                const additionalSpent = Math.min(overageAttempted, entCap);
+                const blocked = Math.max(0, overageAttempted - entCap);
+                const headroom = Math.max(0, consumCeiling - consumption);
+                const cashCost = totalSeatCost + additionalSpent;
+
+                // Per-CC overage (allocated by April share)
+                const ccOverage = {};
+                const ccBlocked = {};
+                const ccOver = {};
+                Object.keys(ccShares).forEach(key => {
+                    const used = overageAttempted * ccShares[key];
+                    const cap = ccBudgets[key];
+                    ccOverage[key] = used;
+                    ccBlocked[key] = Math.max(0, used - cap);
+                    ccOver[key] = used > cap;
+                });
+                const entOver = additionalSpent > entCap || blocked > 0;
+
+                // ===== Plan KPIs =====
+                $('c-kpi-credits').textContent = fmt(creditsPerUser);
+                $('c-kpi-credits-sub').textContent = (isEnt ? 'Enterprise' : 'Business') + ' ' + (isPromo ? 'promo' : 'standard');
+                $('c-kpi-pool').textContent = fmt(totalPool);
+                $('c-kpi-pool-sub').textContent = seats + ' × $' + creditsPerUser;
+                $('c-kpi-seat').textContent = fmt(totalSeatCost);
+                $('c-kpi-seat-sub').textContent = seats + ' × $' + seatFee + ' fixed';
+
+                // ===== Budget KPIs =====
+                $('c-kpi-cc-total').textContent = fmt(ccTotal);
+                $('c-kpi-reserve').textContent = fmt(reserve);
+                $('c-kpi-reserve-sub').textContent = entCap > 0 ? Math.round(reserve / entCap * 100) + '% of cap' : '—';
+                $('c-kpi-ceiling').textContent = fmt(cashCeiling);
+                $('c-kpi-ceiling-sub').textContent = fmt(totalSeatCost) + ' + ' + fmt(entCap);
+                $('c-kpi-consum-ceiling').textContent = fmt(consumCeiling);
+                $('c-kpi-user-env').textContent = fmt(userEnvelope);
+                $('c-kpi-user-env-sub').textContent = (seats - powerCount) + '×' + fmt(universalBudget) + ' + ' + powerCount + '×' + fmt(powerBudget);
+                $('c-kpi-count').textContent = budgetCount;
+
+                // Allocation check
+                const note = $('c-alloc-note');
+                if (ccTotal > entCap) {
+                    note.style.display = 'block';
+                    note.className = 'callout';
+                    note.style.background = 'rgba(224,70,70,0.08)';
+                    note.style.borderLeftColor = 'var(--red)';
+                    note.innerHTML = '<div class="label" style="color:var(--red);font-family:var(--mono);font-size:10px;letter-spacing:.2em;text-transform:uppercase;font-weight:700;margin-bottom:6px">Over-allocated</div><p style="margin:0;color:var(--tx2)">Cost-center sum (' + fmt(ccTotal) + ') exceeds enterprise cap (' + fmt(entCap) + ') by ' + fmt(ccTotal - entCap) + '. Either reduce a CC cap or raise the enterprise cap.</p>';
+                } else if (entCap > 0 && reserve / entCap < 0.05) {
+                    note.style.display = 'block';
+                    note.className = 'callout';
+                    note.style.background = 'rgba(212,169,66,0.08)';
+                    note.style.borderLeftColor = 'var(--gold)';
+                    note.innerHTML = '<div class="label" style="color:var(--gold);font-family:var(--mono);font-size:10px;letter-spacing:.2em;text-transform:uppercase;font-weight:700;margin-bottom:6px">Low reserve</div><p style="margin:0;color:var(--tx2)">Central reserve is only ' + fmt(reserve) + ' (' + Math.round(reserve / entCap * 100) + '% of cap). Recommended ≥ 10% for emergency promotions and surprises.</p>';
+                } else {
+                    note.style.display = 'none';
+                }
+
+                // ===== Viz bar =====
+                $('c-viz-ceiling').textContent = fmt(consumCeiling);
+                const denom = Math.max(consumCeiling, consumption, 1);
+                const segs = [
+                    { cls: 's-pool', val: poolUsed, label: 'POOL' },
+                    { cls: 's-add', val: additionalSpent, label: 'ADD' },
+                    { cls: 's-blk', val: blocked, label: 'BLOCKED' },
+                    { cls: 's-room', val: headroom, label: 'ROOM' }
+                ];
+                let bar = '';
+                segs.forEach(s => {
+                    if (s.val <= 0) return;
+                    const pctW = (s.val / denom) * 100;
+                    const showLabel = pctW > 8;
+                    bar += '<div class="calc-viz-seg ' + s.cls + '" style="width:' + pctW + '%">' + (showLabel ? s.label + ' ' + fmt(s.val) : '') + '</div>';
+                });
+                $('c-viz-bar').innerHTML = bar;
+
+                // ===== Cost-center status =====
+                let ccHtml = '';
+                Object.keys(ccShares).forEach(key => {
+                    const used = ccOverage[key];
+                    const cap = ccBudgets[key];
+                    const isOver = ccOver[key];
+                    const pctFill = cap > 0 ? Math.min(100, (used / cap) * 100) : 0;
+                    const statusLbl = isOver ? 'Over' : (pctFill > 80 ? 'High' : 'OK');
+                    const statusCls = isOver ? 'bad' : (pctFill > 80 ? 'warn' : 'ok');
+                    ccHtml += '<div class="cc-status-card cc-c-' + ccLabels[key].cls + '">' +
+                        '<div class="nm"><b>' + ccLabels[key].name + '</b><span class="status ' + statusCls + '" style="padding:2px 7px;font-size:9.5px">' + statusLbl + '</span></div>' +
+                        '<div class="mtr"><div class="mtr-fill ' + (isOver ? 'over' : '') + '" style="width:' + pctFill + '%"></div></div>' +
+                        '<div class="mtr-info"><span>' + fmt(used) + ' of <b>' + fmt(cap) + '</b></span>' +
+                        '<span>' + (isOver ? '<span style="color:var(--red)">+' + fmt(ccBlocked[key]) + ' over</span>' : fmt(cap - used) + ' left') + '</span></div></div>';
+                });
+                $('c-cc-status').innerHTML = ccHtml;
+
+                // ===== Per-user blocking (3-gate check) =====
+                function checkUser(prefix, consumed, ulb, ccKey) {
+                    const ccOk = !ccOver[ccKey];
+                    const entOk = !entOver;
+                    const ulbOk = consumed <= ulb;
+                    const ulbPct = ulb > 0 ? Math.min(100, (consumed / ulb) * 100) : 0;
+                    const ulbOver = consumed > ulb;
+
+                    // Meter
+                    const m = $('c-' + prefix + '-meter');
+                    m.style.width = ulbPct + '%';
+                    m.classList.toggle('over', ulbOver);
+
+                    // Gate ULB
+                    const gUlb = $('c-' + prefix + '-g-ulb');
+                    gUlb.className = 'gate ' + (ulbOk ? 'pass' : 'fail');
+                    gUlb.querySelector('.tick').textContent = ulbOk ? '✓' : '✗';
+                    $('c-' + prefix + '-g-ulb-d').textContent = ulbOk
+                        ? fmt(consumed) + ' / ' + fmt(ulb) + ' · ' + fmt(ulb - consumed) + ' left'
+                        : fmt(consumed) + ' / ' + fmt(ulb) + ' · over by ' + fmt(consumed - ulb);
+
+                    // Gate CC
+                    const gCc = $('c-' + prefix + '-g-cc');
+                    gCc.className = 'gate ' + (ccOk ? 'pass' : 'fail');
+                    gCc.querySelector('.tick').textContent = ccOk ? '✓' : '✗';
+                    $('c-' + prefix + '-g-cc-d').textContent = ccOk
+                        ? ccLabels[ccKey].name + ': ' + fmt(ccOverage[ccKey]) + ' / ' + fmt(ccBudgets[ccKey])
+                        : ccLabels[ccKey].name + ': OVER by ' + fmt(ccBlocked[ccKey]);
+
+                    // Gate Enterprise
+                    const gEnt = $('c-' + prefix + '-g-ent');
+                    gEnt.className = 'gate ' + (entOk ? 'pass' : 'fail');
+                    gEnt.querySelector('.tick').textContent = entOk ? '✓' : '✗';
+                    $('c-' + prefix + '-g-ent-d').textContent = entOk
+                        ? fmt(additionalSpent) + ' / ' + fmt(entCap)
+                        : 'OVER by ' + fmt(blocked);
+
+                    // Final status
+                    const final = $('c-' + prefix + '-final');
+                    if (ulbOk && ccOk && entOk) {
+                        final.className = 'pill-final ok';
+                        final.textContent = 'Approved';
+                    } else {
+                        final.className = 'pill-final bad';
+                        const reasons = [];
+                        if (!ulbOk) reasons.push('ULB');
+                        if (!ccOk) reasons.push('CC');
+                        if (!entOk) reasons.push('Enterprise');
+                        final.textContent = 'Blocked · ' + reasons.join(' + ');
+                    }
+                }
+
+                const stdConsumed = +$('c-std-consumed').value || 0;
+                const stdCc = $('c-std-cc').value;
+                checkUser('std', stdConsumed, universalBudget, stdCc);
+
+                const pwrConsumed = +$('c-pwr-consumed').value || 0;
+                const pwrCc = $('c-pwr-cc').value;
+                checkUser('pwr', pwrConsumed, powerBudget, pwrCc);
+
+                // ===== §05 Cost Center allocation sync =====
+                updateS5(entCap, ccBudgets, ccTotal, reserve, totalPool);
+                updateChargeback(seats, totalSeatCost, entCap, ccBudgets, reserve);
+
+                // ===== Financial Dashboard =====
+                const standardCredits = seatFee; // standard plan: credits = seat fee
+                const promoBonus = (creditsPerUser - standardCredits) * seats;
+                const APRIL_BASELINE = 91023;
+                const baselineSavings = APRIL_BASELINE - cashCost;
+                const savingsPct = Math.round(baselineSavings / APRIL_BASELINE * 100);
+
+                const cdCost = $('cd-cost');
+                if (cdCost) {
+                    cdCost.textContent = fmt(cashCost);
+                    const zone = cashCost <= 45000 ? 'green' : cashCost <= 50000 ? 'gold' : 'red';
+                    cdCost.className = 'cd-val ' + zone;
+                    $('cd-cost-sub').textContent = fmt(totalSeatCost) + ' seats · ' + fmt(additionalSpent) + ' overage';
+                    const badge = $('cd-cost-badge');
+                    if (cashCost <= 45000) { badge.className = 'cd-badge green'; badge.textContent = '✓ within $50k zone'; }
+                    else if (cashCost <= 50000) { badge.className = 'cd-badge gold'; badge.textContent = '⚠ near $50k ceiling'; }
+                    else { badge.className = 'cd-badge red'; badge.textContent = '✗ over $50k zone'; }
+
+                    $('cd-bonus').textContent = promoBonus > 0 ? '+' + fmt(promoBonus) : fmt(0);
+                    $('cd-bonus').className = 'cd-val ' + (promoBonus > 0 ? 'teal' : '');
+                    $('cd-bonus-sub').textContent = promoBonus > 0
+                        ? 'free credits vs standard pricing'
+                        : 'no promo — standard credits only';
+                    const bonusBadge = $('cd-bonus-badge');
+                    bonusBadge.textContent = promoBonus > 0
+                        ? '+$' + (creditsPerUser - standardCredits) + '/seat · promo active'
+                        : 'standard pricing';
+                    bonusBadge.className = 'cd-badge ' + (promoBonus > 0 ? 'teal' : '');
+
+                    $('cd-savings').textContent = baselineSavings >= 0 ? '-' + fmt(baselineSavings) : '+' + fmt(-baselineSavings);
+                    $('cd-savings').className = 'cd-val ' + (baselineSavings >= 0 ? 'green' : 'red');
+                    const savBadge = $('cd-savings-pct');
+                    savBadge.textContent = (baselineSavings >= 0 ? '-' : '+') + Math.abs(savingsPct) + '%';
+                    savBadge.className = 'cd-badge ' + (baselineSavings >= 0 ? 'green' : 'red');
+                }
+
+                // ===== Promo KPI =====
+                const promoBonusEl = $('c-kpi-promo-bonus');
+                if (promoBonusEl) {
+                    promoBonusEl.textContent = promoBonus > 0 ? '+' + fmt(promoBonus) : fmt(0);
+                    promoBonusEl.className = 'calc-kpi-val ' + (promoBonus > 0 ? 'teal' : '');
+                    $('c-kpi-promo-bonus-sub').textContent = promoBonus > 0
+                        ? '+$' + (creditsPerUser - standardCredits) + '/seat free credits'
+                        : 'no promo — standard credits';
+                }
+
+                // ===== Summary =====
+                $('c-sum-seat').textContent = fmt(totalSeatCost);
+                $('c-sum-add').textContent = fmt(additionalSpent);
+                $('c-sum-add-sub').textContent = 'at ' + fmt(consumption) + ' consumption';
+                $('c-sum-cash').textContent = fmt(cashCost);
+                let cashColor = 'accent', cashSub = '';
+                if (cashCost <= 45000) { cashColor = 'green'; cashSub = '✓ comfortably within $50k zone'; }
+                else if (cashCost <= 50000) { cashColor = 'gold'; cashSub = '⚠ near top of $50k zone'; }
+                else { cashColor = 'red'; cashSub = '✗ exceeds $50k zone'; }
+                $('c-sum-cash').className = 'val ' + cashColor;
+                $('c-sum-cash-sub').textContent = cashSub;
+                $('c-sum-blk').textContent = fmt(blocked);
+                $('c-sum-blk-sub').textContent = blocked > 0 ? '⚠ service degradation' : 'no blocking';
+                $('c-sum-blk').className = blocked > 0 ? 'val red' : 'val green';
+                const perSeatEl = $('c-sum-per-seat');
+                if (perSeatEl) perSeatEl.textContent = seats > 0 ? '$' + Math.round(cashCost / seats).toLocaleString() : '—';
+                const savingsEl = $('c-sum-savings');
+                if (savingsEl) {
+                    savingsEl.textContent = baselineSavings >= 0 ? '-' + fmt(baselineSavings) : '+' + fmt(-baselineSavings);
+                    savingsEl.className = 'val ' + (baselineSavings >= 0 ? 'green' : 'red');
+                    $('c-sum-savings-sub').textContent = (baselineSavings >= 0 ? '-' : '+') + Math.abs(savingsPct) + '% vs $91k Apr baseline';
+                }
+            }
+
+            // Department roster — for §06 chargeback breakdown
+            const cbDepts = [
+                // id,         label key,    cc-key,       overall_share,   share_within_general
+                ['inovacao', 'inovacao', 'inovacao', 0.31292, null],
+                ['operacoes', 'operacoes', 'operacoes', 0.22323, null],
+                ['sistemas', 'sistemas', 'sistemas', 0.14834, null],
+                ['redes', 'redes', 'redes', 0.09479, null],
+                ['ai', 'ai', 'ai', 0.05002, null],
+                ['ttone', 'ttone', 'general', 0.04509, 0.26408],
+                ['crm', 'crm', 'general', 0.04427, 0.25929],
+                ['cce', 'cce', 'general', 0.02925, 0.17133],
+                ['ciber', 'ciber', 'general', 0.02417, 0.14157],
+                ['cyber', 'cyber', 'general', 0.01657, 0.09708],
+                ['ctemp', 'ctemp', 'general', 0.00576, 0.03372],
+                ['madeira', 'madeira', 'general', 0.00392, 0.02294],
+                ['acores', 'acores', 'general', 0.00168, 0.00982],
+                ['semteam', 'semteam', 'general', 0.00002, 0.00014]
+            ];
+
+            function updateChargeback(seats, totalSeatCost, entCap, ccBudgets, reserve) {
+                const fmt2 = n => '$' + Math.round(n).toLocaleString();
+                const set = (id, text) => { const el = $(id); if (el) el.textContent = text; };
+                const setH = (id, html) => { const el = $(id); if (el) el.innerHTML = html; };
+
+                let licSum = 0, capSum = 0, seatSum = 0;
+                cbDepts.forEach(d => {
+                    const [id, , ccKey, share, withinGen] = d;
+                    const estSeats = Math.round(seats * share);
+                    const license = share * totalSeatCost;
+                    const cap = withinGen !== null
+                        ? withinGen * (ccBudgets['general'] || 0)
+                        : (ccBudgets[ccKey] || 0);
+                    const total = license + cap;
+                    set('cb-share-' + id, (share * 100).toFixed(share < 0.001 ? 3 : 2) + '%');
+                    set('cb-seats-' + id, estSeats);
+                    set('cb-license-' + id, fmt2(license));
+                    set('cb-cap-' + id, fmt2(cap));
+                    setH('cb-total-' + id, '<b>' + fmt2(total) + '</b>');
+                    licSum += license; capSum += cap; seatSum += estSeats;
+                });
+
+                set('cb-gen-cap-info', fmt2(ccBudgets['general'] || 0));
+                set('cb-cap-reserve', fmt2(reserve));
+                setH('cb-total-reserve', '<b>' + fmt2(reserve) + '</b>');
+
+                setH('cb-seats-total', '<b>' + seats + '</b>');
+                setH('cb-license-total', '<b>' + fmt2(totalSeatCost) + '</b>');
+                setH('cb-cap-total', '<b>' + fmt2(entCap) + '</b>');
+                setH('cb-grand-total', '<b>' + fmt2(totalSeatCost + entCap) + '</b>');
+            }
+
+            function updateS5(entCap, ccBudgets, ccTotal, reserve, totalPool) {
+                const fmtAuto = n => '$' + Math.round(n).toLocaleString();
+                const fmtK = n => {
+                    if (n >= 1000) {
+                        const k = n / 1000;
+                        return '$' + (k % 1 === 0 ? k.toFixed(0) : k.toFixed(1)) + 'k';
+                    }
+                    return fmtAuto(n);
+                };
+                const setText = (id, text) => { const el = $(id); if (el) el.textContent = text; };
+
+                // Enterprise cap (3 places: intro, donut center, totals row)
+                setText('s5-ent-cap-1', fmtAuto(entCap));
+                setText('s5-ent-cap-2', fmtAuto(entCap));
+                setText('s5-ent-cap-k', fmtK(entCap));
+
+                // Allocated and reserve
+                setText('s5-allocated', fmtAuto(ccTotal));
+                setText('s5-reserve-1', fmtAuto(reserve));
+                setText('s5-reserve-2', fmtAuto(reserve));
+
+                // Per-CC: cap, pool slice, quota %
+                const keys = ['inovacao', 'operacoes', 'sistemas', 'redes', 'ai', 'general'];
+                keys.forEach(k => {
+                    const cap = ccBudgets[k];
+                    const poolSlice = ccShares[k] * totalPool;
+                    setText('s5-cap-' + k, fmtAuto(cap));
+                    setText('s5-pool-' + k, fmtAuto(poolSlice));
+                    const quotaEl = $('s5-quota-' + k);
+                    if (quotaEl) {
+                        const aprActual = +quotaEl.dataset.april || 0;
+                        const pct = cap > 0 ? Math.round((aprActual / cap) * 100) : 0;
+                        quotaEl.textContent = pct + '%';
+                        quotaEl.style.color = pct > 100 ? 'var(--red)' : (pct >= 80 ? 'var(--gold)' : 'var(--green)');
+                        quotaEl.style.fontWeight = pct > 100 ? '700' : '400';
+                    }
+                });
+
+                // Totals: pool total, quota % (against enterprise cap)
+                setText('s5-pool-total', fmtAuto(totalPool));
+                const totalQuotaEl = $('s5-quota-total');
+                if (totalQuotaEl) {
+                    const totalApr = +totalQuotaEl.dataset.april || 0;
+                    const pct = entCap > 0 ? Math.round((totalApr / entCap) * 100) : 0;
+                    totalQuotaEl.innerHTML = '<b>' + pct + '%</b>';
+                    totalQuotaEl.style.color = pct > 100 ? 'var(--red)' : (pct >= 80 ? 'var(--gold)' : 'var(--green)');
+                }
+            }
+
+            // Initial render — wait for DOM to be ready
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', recalc);
+            } else {
+                recalc();
+            }
+        })();
+    </script>
+</body>
+
+</html>
