@@ -52,11 +52,6 @@ const ACCOUNT_BUDGET_FIELDS: Array<{ field: BudgetField; label: string; descript
     label: 'Account level budget',
     description: 'Controls additional spend only for the current billing period.\nDoes not impact included credits.',
   },
-  {
-    field: 'user',
-    label: 'User level budget',
-    description: 'Applies to pooled AI Credits and additional spend. Controls how many AI Credits a user can spend in total.',
-  },
 ]
 
 const INDIVIDUAL_BUDGET_FIELDS: Array<{ field: BudgetField; label: string; description: string }> = [
@@ -106,7 +101,13 @@ function formatSimulationDate(value: string | null): string {
     return 'Not reached in this simulation.'
   }
 
-  return new Date(`${value}T00:00:00`).toLocaleDateString('en-US', {
+  const dateOnly = value.includes('T') ? value.split('T')[0] : value.split(' ')[0]
+  const parsed = new Date(`${dateOnly}T00:00:00`)
+  if (Number.isNaN(parsed.getTime())) {
+    return value
+  }
+
+  return parsed.toLocaleDateString('en-US', {
     month: 'long',
     day: 'numeric',
     year: 'numeric',
@@ -275,11 +276,11 @@ export function CostManagementView({
           </div>
 
           <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
-            {costCenters.map((cc) => (
+            {[...costCenters].sort((a, b) => b.totals.aicNetAmount - a.totals.aicNetAmount).map((cc) => (
               <label key={cc.costCenterName} className="border border-border-default rounded-md px-5 py-5 flex flex-col gap-3 bg-bg-muted/30">
                 <div className="flex flex-col gap-1">
                   <span className="text-sm font-semibold text-fg-default">{cc.costCenterName}</span>
-                  <span className="text-[13px] text-fg-muted leading-normal">{cc.userCount} user{cc.userCount !== 1 ? 's' : ''} · {formatUsd(cc.totals.aicNetAmount)} AIC net spend</span>
+                  <span className="text-[13px] text-fg-muted leading-normal">{cc.userCount} user{cc.userCount !== 1 ? 's' : ''} · {formatUsd(cc.totals.aicNetAmount)} AIC net spend · {currentAicBill > 0 ? ((cc.totals.aicNetAmount / currentAicBill) * 100).toFixed(1) : '0.0'}%</span>
                 </div>
 
                 <div className="flex items-center rounded-md border border-border-default bg-bg-default focus-within:border-fg-accent focus-within:shadow-[0_0_0_3px_rgba(9,105,218,0.3)]">
@@ -303,109 +304,135 @@ export function CostManagementView({
       )}
 
       {!isIndividualReport && (
-        <>
-          {userBudgetParsed !== undefined && licenseGrantPerUser !== undefined && userBudgetParsed <= licenseGrantPerUser && (
-            <p className="m-0 text-[13px] text-fg-attention">
-              ⚠️ The user level budget ({formatUsd(userBudgetParsed)}) is at or below the per-user license grant ({formatUsd(licenseGrantPerUser)}). Users may be blocked before using any additional spend.
-            </p>
-          )}
-        </>
-      )}
-
-      {!isIndividualReport && (
         <div className="bg-bg-default border border-border-default rounded-md px-5 py-5 flex flex-col gap-4">
           <div className="flex flex-col gap-1">
-            <strong className="text-sm font-semibold text-fg-default">Power user budgets</strong>
+            <strong className="text-sm font-semibold text-fg-default">User level budgets</strong>
             <p className="m-0 text-[13px] text-fg-muted">
-              Override the universal user level budget for specific users. If set, this replaces the universal user budget for that user.
+              Applies to pooled AI Credits and additional spend. Controls how many AI Credits a user can spend in total.
             </p>
+            {userBudgetParsed !== undefined && licenseGrantPerUser !== undefined && userBudgetParsed <= licenseGrantPerUser && (
+              <p className="m-0 text-[13px] text-fg-attention">
+                ⚠️ The user level budget ({formatUsd(userBudgetParsed)}) is at or below the per-user license grant ({formatUsd(licenseGrantPerUser)}). Users may be blocked before using any additional spend.
+              </p>
+            )}
           </div>
 
-          <div className="flex flex-col gap-3">
-            <div className="flex gap-2">
-              <div className="relative flex-1">
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+            <label className="border border-border-default rounded-md px-5 py-5 flex flex-col gap-3 bg-bg-muted/30">
+              <div className="flex flex-col gap-1">
+                <span className="text-sm font-semibold text-fg-default">User level budget</span>
+                <span className="text-[13px] text-fg-muted leading-normal">Universal budget applied to every user.</span>
+              </div>
+
+              <div className="flex items-center rounded-md border border-border-default bg-bg-default focus-within:border-fg-accent focus-within:shadow-[0_0_0_3px_rgba(9,105,218,0.3)]">
+                <span className="pl-3 text-sm font-medium text-fg-muted" aria-hidden>
+                  $
+                </span>
                 <input
                   type="text"
-                  className="w-full rounded-md border border-border-default bg-bg-default px-3 py-2 text-sm text-fg-default outline-none focus:border-fg-accent focus:shadow-[0_0_0_3px_rgba(9,105,218,0.3)]"
-                  value={powerUserInput}
-                  onChange={(e) => setPowerUserInput(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && powerUserInput.trim()) {
-                      onAddPowerUser(powerUserInput.trim())
-                      setPowerUserInput('')
-                    }
-                  }}
-                  placeholder="Search for a user to add…"
-                  aria-label="Add power user"
+                  inputMode="decimal"
+                  className="w-full border-0 bg-transparent px-2 py-2.5 text-sm text-fg-default outline-none"
+                  value={budgetValues.user}
+                  onChange={(event) => onBudgetValueChange('user', sanitizeUsdInput(event.target.value))}
+                  placeholder="0.00"
+                  aria-label="User level budget"
                 />
-                {powerUserSuggestions.length > 0 && (
-                  <ul className="absolute z-10 mt-1 w-full bg-bg-default border border-border-default rounded-md shadow-lg max-h-48 overflow-y-auto">
-                    {powerUserSuggestions.map((username) => (
-                      <li key={username}>
-                        <button
-                          type="button"
-                          className="w-full text-left px-3 py-2 text-sm text-fg-default hover:bg-bg-muted cursor-pointer border-0 bg-transparent"
-                          onClick={() => {
-                            onAddPowerUser(username)
-                            setPowerUserInput('')
-                          }}
-                        >
-                          {username}
-                        </button>
-                      </li>
+              </div>
+            </label>
+
+            <div className="border border-border-default rounded-md px-5 py-5 flex flex-col gap-3 bg-bg-muted/30">
+              <div className="flex flex-col gap-1">
+                <span className="text-sm font-semibold text-fg-default">Power user budgets</span>
+                <span className="text-[13px] text-fg-muted leading-normal">Override the universal user level budget for specific users.</span>
+              </div>
+
+              <div className="flex flex-col gap-3">
+                <div className="flex gap-2">
+                  <div className="relative flex-1">
+                    <input
+                      type="text"
+                      className="w-full rounded-md border border-border-default bg-bg-default px-3 py-2 text-sm text-fg-default outline-none focus:border-fg-accent focus:shadow-[0_0_0_3px_rgba(9,105,218,0.3)]"
+                      value={powerUserInput}
+                      onChange={(e) => setPowerUserInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && powerUserInput.trim()) {
+                          onAddPowerUser(powerUserInput.trim())
+                          setPowerUserInput('')
+                        }
+                      }}
+                      placeholder="Search for a user to add…"
+                      aria-label="Add power user"
+                    />
+                    {powerUserSuggestions.length > 0 && (
+                      <ul className="absolute z-10 mt-1 w-full bg-bg-default border border-border-default rounded-md shadow-lg max-h-48 overflow-y-auto">
+                        {powerUserSuggestions.map((username) => (
+                          <li key={username}>
+                            <button
+                              type="button"
+                              className="w-full text-left px-3 py-2 text-sm text-fg-default hover:bg-bg-muted cursor-pointer border-0 bg-transparent"
+                              onClick={() => {
+                                onAddPowerUser(username)
+                                setPowerUserInput('')
+                              }}
+                            >
+                              {username}
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                  <button
+                    type="button"
+                    className="px-3 py-2 text-[13px] font-medium border border-border-default rounded-md bg-bg-default text-fg-default cursor-pointer hover:bg-bg-muted disabled:opacity-50 disabled:cursor-default"
+                    onClick={() => {
+                      if (powerUserInput.trim()) {
+                        onAddPowerUser(powerUserInput.trim())
+                        setPowerUserInput('')
+                      }
+                    }}
+                    disabled={!powerUserInput.trim()}
+                  >
+                    Add
+                  </button>
+                </div>
+
+                {Object.keys(powerUserBudgets).length > 0 && (
+                  <div className="flex flex-col gap-3">
+                    {Object.entries(powerUserBudgets).map(([username, value]) => (
+                      <div key={username} className="border border-border-default rounded-md px-4 py-3 flex flex-col gap-2 bg-bg-default">
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm font-semibold text-fg-default">{username}</span>
+                          <button
+                            type="button"
+                            className="text-xs text-fg-muted hover:text-fg-danger cursor-pointer border-0 bg-transparent"
+                            onClick={() => onRemovePowerUser(username)}
+                            aria-label={`Remove ${username}`}
+                          >
+                            ✕
+                          </button>
+                        </div>
+
+                        <div className="flex items-center rounded-md border border-border-default bg-bg-default focus-within:border-fg-accent focus-within:shadow-[0_0_0_3px_rgba(9,105,218,0.3)]">
+                          <span className="pl-3 text-sm font-medium text-fg-muted" aria-hidden>
+                            $
+                          </span>
+                          <input
+                            type="text"
+                            inputMode="decimal"
+                            className="w-full border-0 bg-transparent px-2 py-2.5 text-sm text-fg-default outline-none"
+                            value={value}
+                            onChange={(event) => onPowerUserBudgetChange(username, sanitizeUsdInput(event.target.value))}
+                            placeholder="0.00"
+                            aria-label={`${username} budget`}
+                          />
+                        </div>
+                      </div>
                     ))}
-                  </ul>
+                  </div>
                 )}
               </div>
-              <button
-                type="button"
-                className="px-3 py-2 text-[13px] font-medium border border-border-default rounded-md bg-bg-default text-fg-default cursor-pointer hover:bg-bg-muted disabled:opacity-50 disabled:cursor-default"
-                onClick={() => {
-                  if (powerUserInput.trim()) {
-                    onAddPowerUser(powerUserInput.trim())
-                    setPowerUserInput('')
-                  }
-                }}
-                disabled={!powerUserInput.trim()}
-              >
-                Add
-              </button>
             </div>
-
-            {Object.keys(powerUserBudgets).length > 0 && (
-              <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
-                {Object.entries(powerUserBudgets).map(([username, value]) => (
-                  <div key={username} className="border border-border-default rounded-md px-5 py-5 flex flex-col gap-3 bg-bg-muted/30">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-semibold text-fg-default">{username}</span>
-                      <button
-                        type="button"
-                        className="text-xs text-fg-muted hover:text-fg-danger cursor-pointer border-0 bg-transparent"
-                        onClick={() => onRemovePowerUser(username)}
-                        aria-label={`Remove ${username}`}
-                      >
-                        ✕
-                      </button>
-                    </div>
-
-                    <div className="flex items-center rounded-md border border-border-default bg-bg-default focus-within:border-fg-accent focus-within:shadow-[0_0_0_3px_rgba(9,105,218,0.3)]">
-                      <span className="pl-3 text-sm font-medium text-fg-muted" aria-hidden>
-                        $
-                      </span>
-                      <input
-                        type="text"
-                        inputMode="decimal"
-                        className="w-full border-0 bg-transparent px-2 py-2.5 text-sm text-fg-default outline-none"
-                        value={value}
-                        onChange={(event) => onPowerUserBudgetChange(username, sanitizeUsdInput(event.target.value))}
-                        placeholder="0.00"
-                        aria-label={`${username} budget`}
-                      />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
           </div>
         </div>
       )}

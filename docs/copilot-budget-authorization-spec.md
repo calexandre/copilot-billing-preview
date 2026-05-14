@@ -15,7 +15,7 @@ This spec defines the algorithm GitHub Copilot uses to authorize, charge, or blo
 | **AI credit** | Unit of billable consumption. 1 credit = 1 US cent. All counters in this spec are in dollars for readability. |
 | **License grant** | Per-user monthly dollar allowance granted by a Copilot license. Business = $19, Enterprise = $39 (base). June–Aug 2026 promo: $30 / $70. |
 | **Shared pool** | Enterprise-scoped reservoir of credits. Refilled at the start of each billing period to the sum of all active license grants. |
-| **Pool charge** | A request charged against the shared pool. Default classification until the pool is empty. |
+| **Pool charge** | A request charged against the shared pool . Default classification until the pool is empty. |
 | **Additional spend** | A request charged after the pool is exhausted. Subject to enterprise and cost-center overage caps. |
 | **Billing period** | Calendar month. All consumption counters reset to zero at the start. Configuration (budgets) persists. |
 | **Exempt request** | Request whose cost is zero by definition: code completions and next-edit suggestions. Bypasses all gates. |

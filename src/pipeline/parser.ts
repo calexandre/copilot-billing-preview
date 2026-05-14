@@ -225,6 +225,11 @@ function getNullableString(row: string[], i: number | undefined): string | null 
   return raw ? raw : null
 }
 
+function normalizeDate(value: string): string {
+  const match = /^(\d{4}-\d{2}-\d{2})/.exec(value)
+  return match ? match[1] : value
+}
+
 export function parseTokenUsageRecord(line: string, header: TokenUsageHeader): TokenUsageRecord {
   const row = parseCsvRow(line)
   const aicQuantityIndex = header.index['aic_quantity']
@@ -233,7 +238,7 @@ export function parseTokenUsageRecord(line: string, header: TokenUsageHeader): T
   const aicGrossAmountRaw = getString(row, aicGrossAmountIndex).trim()
 
   const record: TokenUsageRecord = {
-    date: getString(row, header.index['date']).trim(),
+    date: normalizeDate(getString(row, header.index['date']).trim()),
     username: getString(row, header.index['username']).trim(),
     product: getString(row, header.index['product']).trim(),
     sku: getString(row, header.index['sku']).trim(),
