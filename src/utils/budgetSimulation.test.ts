@@ -77,6 +77,8 @@ describe('simulateBudgetFromRecords', () => {
       budgetExhausted: false,
       firstUserBlockedDate: null,
       accountBlockedDate: null,
+      costCenterBlockedDates: {},
+      costCenterResults: [],
       productBlockedDates: {},
       adjustedDailyNetCostByDate: [{ date: '2026-06-01', amount: 8 }],
     })
@@ -97,6 +99,8 @@ describe('simulateBudgetFromRecords', () => {
       budgetExhausted: true,
       firstUserBlockedDate: null,
       accountBlockedDate: '2026-06-01',
+      costCenterBlockedDates: {},
+      costCenterResults: [],
       productBlockedDates: {},
       adjustedDailyNetCostByDate: [{ date: '2026-06-01', amount: 5 }],
     })
@@ -119,6 +123,8 @@ describe('simulateBudgetFromRecords', () => {
       budgetExhausted: true,
       firstUserBlockedDate: null,
       accountBlockedDate: '2026-06-01',
+      costCenterBlockedDates: {},
+      costCenterResults: [],
       productBlockedDates: {},
       adjustedDailyNetCostByDate: [{ date: '2026-06-01', amount: 1 }],
     })
@@ -142,6 +148,8 @@ describe('simulateBudgetFromRecords', () => {
       budgetExhausted: false,
       firstUserBlockedDate: '2026-06-01',
       accountBlockedDate: null,
+      costCenterBlockedDates: {},
+      costCenterResults: [],
       productBlockedDates: {},
       adjustedDailyNetCostByDate: [],
     })
@@ -163,6 +171,8 @@ describe('simulateBudgetFromRecords', () => {
       budgetExhausted: false,
       firstUserBlockedDate: '2026-06-01',
       accountBlockedDate: null,
+      costCenterBlockedDates: {},
+      costCenterResults: [],
       productBlockedDates: {},
       adjustedDailyNetCostByDate: [],
     })
@@ -185,6 +195,8 @@ describe('simulateBudgetFromRecords', () => {
       budgetExhausted: false,
       firstUserBlockedDate: '2026-06-01',
       accountBlockedDate: null,
+      costCenterBlockedDates: {},
+      costCenterResults: [],
       productBlockedDates: {},
       adjustedDailyNetCostByDate: [],
     })
@@ -210,6 +222,8 @@ describe('simulateBudgetFromRecords', () => {
       budgetExhausted: false,
       firstUserBlockedDate: '2026-06-02',
       accountBlockedDate: null,
+      costCenterBlockedDates: {},
+      costCenterResults: [],
       productBlockedDates: {},
       adjustedDailyNetCostByDate: [],
     })
@@ -232,6 +246,8 @@ describe('simulateBudgetFromRecords', () => {
       budgetExhausted: false,
       firstUserBlockedDate: '2026-06-01',
       accountBlockedDate: null,
+      costCenterBlockedDates: {},
+      costCenterResults: [],
       productBlockedDates: {},
       adjustedDailyNetCostByDate: [],
     })
@@ -254,6 +270,8 @@ describe('simulateBudgetFromRecords', () => {
       budgetExhausted: false,
       firstUserBlockedDate: '2026-06-01',
       accountBlockedDate: null,
+      costCenterBlockedDates: {},
+      costCenterResults: [],
       productBlockedDates: {},
       adjustedDailyNetCostByDate: [],
     })
@@ -276,6 +294,8 @@ describe('simulateBudgetFromRecords', () => {
       budgetExhausted: true,
       firstUserBlockedDate: null,
       accountBlockedDate: '2026-06-02',
+      costCenterBlockedDates: {},
+      costCenterResults: [],
       productBlockedDates: {},
       adjustedDailyNetCostByDate: [{ date: '2026-06-01', amount: 50 }],
     })
@@ -295,6 +315,8 @@ describe('simulateBudgetFromRecords', () => {
       budgetExhausted: true,
       firstUserBlockedDate: null,
       accountBlockedDate: '2026-06-02',
+      costCenterBlockedDates: {},
+      costCenterResults: [],
       productBlockedDates: {},
       adjustedDailyNetCostByDate: [{ date: '2026-06-02', amount: 2 }],
     })
@@ -321,6 +343,8 @@ describe('simulateBudgetFromRecords', () => {
       budgetExhausted: false,
       firstUserBlockedDate: null,
       accountBlockedDate: null,
+      costCenterBlockedDates: {},
+      costCenterResults: [],
       productBlockedDates: {
         [PRODUCT_BUDGET_COPILOT]: '2026-06-02',
       },
@@ -348,6 +372,8 @@ describe('simulateBudgetFromRecords', () => {
       budgetExhausted: false,
       firstUserBlockedDate: null,
       accountBlockedDate: null,
+      costCenterBlockedDates: {},
+      costCenterResults: [],
       productBlockedDates: {
         [PRODUCT_BUDGET_COPILOT_CLOUD_AGENT]: '2026-06-01',
         [PRODUCT_BUDGET_SPARK]: '2026-06-01',
@@ -357,6 +383,69 @@ describe('simulateBudgetFromRecords', () => {
         { date: '2026-06-02', amount: 2 },
       ],
     })
+  })
+
+  it('blocks cost center members when cost center additional spend budget is exhausted', () => {
+    const result = simulateBudgetFromRecords([
+      createRecord({ date: '2026-06-01', username: 'mona', cost_center_name: 'Platform', quantity: 100, aic_quantity: 100, aic_gross_amount: 10 }),
+      createRecord({ date: '2026-06-02', username: 'octocat', cost_center_name: 'Platform', quantity: 50, aic_quantity: 50, aic_gross_amount: 5 }),
+      createRecord({ date: '2026-06-03', username: 'hubot', cost_center_name: 'Data', quantity: 50, aic_quantity: 50, aic_gross_amount: 5 }),
+    ], { costCenterBudgetsUsd: { Platform: 10, Data: 10 } }, pooledContext)
+
+    expect(result.costCenterBlockedDates).toEqual({ Platform: '2026-06-01' })
+    expect(result.blockedUsers).toBe(1)
+    expect(result.totalBill).toBe(15)
+    expect(result.costCenterResults).toHaveLength(2)
+    const platformResult = result.costCenterResults.find(cc => cc.costCenterName === 'Platform')!
+    expect(platformResult.exhaustionDate).toBe('2026-06-01')
+    expect(platformResult.budgetUsd).toBe(10)
+    const dataResult = result.costCenterResults.find(cc => cc.costCenterName === 'Data')!
+    expect(dataResult.exhaustionDate).toBeNull()
+  })
+
+  it('users without a cost center bypass the cost center gate', () => {
+    const result = simulateBudgetFromRecords([
+      createRecord({ date: '2026-06-01', username: 'mona', cost_center_name: null, quantity: 100, aic_quantity: 100, aic_gross_amount: 10 }),
+      createRecord({ date: '2026-06-02', username: 'octocat', cost_center_name: 'Platform', quantity: 100, aic_quantity: 100, aic_gross_amount: 10 }),
+    ], { costCenterBudgetsUsd: { Platform: 5 } }, pooledContext)
+
+    expect(result.totalBill).toBe(15)
+    expect(result.blockedUsers).toBe(1)
+    expect(result.costCenterBlockedDates).toEqual({ Platform: '2026-06-02' })
+  })
+
+  it('applies power user budget overrides instead of the universal user budget', () => {
+    const result = simulateBudgetFromRecords([
+      createRecord({ username: 'mona', quantity: 100, aic_quantity: 100, aic_gross_amount: 10 }),
+      createRecord({ username: 'octocat', quantity: 100, aic_quantity: 100, aic_gross_amount: 10 }),
+    ], { userBudgetUsd: 5, powerUserBudgetsUsd: { mona: 15 } }, pooledContext)
+
+    expect(result.totalBill).toBe(15)
+    expect(result.blockedUsers).toBe(1)
+  })
+
+  it('power user budgets cap total usage like universal budget', () => {
+    const result = simulateBudgetFromRecords([
+      createRecord({ username: 'mona', quantity: 200, aic_quantity: 200, aic_gross_amount: 20 }),
+    ], { powerUserBudgetsUsd: { mona: 8 } }, {
+      ...pooledContext,
+      organizationIncludedCreditsPool: 100,
+    })
+
+    expect(result.blockedUsers).toBe(1)
+    expect(result.blockedRequests).toBe(120)
+  })
+
+  it('cost center results include consumption percentage', () => {
+    const result = simulateBudgetFromRecords([
+      createRecord({ date: '2026-06-01', username: 'mona', cost_center_name: 'Platform', quantity: 75, aic_quantity: 75, aic_gross_amount: 7.5 }),
+      createRecord({ date: '2026-06-01', username: 'octocat', cost_center_name: 'Data', quantity: 25, aic_quantity: 25, aic_gross_amount: 2.5 }),
+    ], { costCenterBudgetsUsd: { Platform: 100, Data: 100 } }, pooledContext)
+
+    const platformResult = result.costCenterResults.find(cc => cc.costCenterName === 'Platform')!
+    expect(platformResult.consumptionPercent).toBeCloseTo(75, 0)
+    const dataResult = result.costCenterResults.find(cc => cc.costCenterName === 'Data')!
+    expect(dataResult.consumptionPercent).toBeCloseTo(25, 0)
   })
 })
 

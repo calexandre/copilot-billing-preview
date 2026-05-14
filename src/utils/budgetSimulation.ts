@@ -3,6 +3,16 @@ import { getAicUsageMetrics, getUsageMetrics, parseNormalizedTokenUsageRecord, p
 import { getProductBudgetName, isNonCopilotCodeReviewUsage, NON_COPILOT_CODE_REVIEW_USER_LABEL, type ProductBudgetName } from '../pipeline/productClassification'
 import { streamLines } from '../pipeline/streamer'
 
+export type CostCenterSimulationResult = {
+  costCenterName: string
+  budgetUsd: number
+  additionalSpendConsumed: number
+  amountBlocked: number
+  utilizationPercent: number
+  exhaustionDate: string | null
+  consumptionPercent: number
+}
+
 export type BudgetSimulationResult = {
   totalBill: number
   blockedUsers: number
@@ -11,6 +21,8 @@ export type BudgetSimulationResult = {
   budgetExhausted: boolean
   firstUserBlockedDate: string | null
   accountBlockedDate: string | null
+  costCenterBlockedDates: Record<string, string>
+  costCenterResults: CostCenterSimulationResult[]
   productBlockedDates: Partial<Record<ProductBudgetName, string>>
   adjustedDailyNetCostByDate: Array<{ date: string; amount: number }>
 }
@@ -18,13 +30,26 @@ export type BudgetSimulationResult = {
 export type BudgetSimulationOptions = {
   accountBudgetUsd?: number
   userBudgetUsd?: number
+  powerUserBudgetsUsd?: Record<string, number>
+  costCenterBudgetsUsd?: Record<string, number>
   productBudgetsUsd?: Partial<Record<ProductBudgetName, number>>
 }
 
 type BudgetSimulationContext = Pick<AicIncludedCreditsContext, 'reportPlanScope' | 'organizationIncludedCreditsPool' | 'individualMonthlyIncludedCredits'>
+type CostCenterBudgetState = {
+  remainingBudget: number
+  additionalSpendConsumed: number
+  totalAicGrossConsumed: number
+  exhaustionDate: string | null
+}
+
 type BudgetSimulationState = {
   remainingAccountBudget: number
   userBudgetCap: number
+  powerUserBudgets: Map<string, number>
+  costCenterBudgets: Map<string, CostCenterBudgetState>
+  costCenterBlockedDates: Record<string, string>
+  totalAicGrossAmount: number
   remainingProductBudgetByName: Map<ProductBudgetName, number>
   remainingOrganizationIncludedCredits: number
   totalBill: number
@@ -85,9 +110,27 @@ function createBudgetSimulationState(
   options: BudgetSimulationOptions,
   context: BudgetSimulationContext,
 ): BudgetSimulationState {
+  const costCenterBudgets = new Map<string, CostCenterBudgetState>()
+  for (const [name, amount] of Object.entries(options.costCenterBudgetsUsd ?? {})) {
+    const budget = normalizeBudget(amount)
+    if (budget !== Number.POSITIVE_INFINITY) {
+      costCenterBudgets.set(name, {
+        remainingBudget: budget,
+        additionalSpendConsumed: 0,
+        totalAicGrossConsumed: 0,
+        exhaustionDate: null,
+      })
+    }
+  }
+
   return {
     remainingAccountBudget: normalizeBudget(options.accountBudgetUsd),
     userBudgetCap: normalizeBudget(options.userBudgetUsd),
+    powerUserBudgets: new Map<string, number>(Object.entries(options.powerUserBudgetsUsd ?? {})
+      .map(([username, amount]) => [username, normalizeBudget(amount)])),
+    costCenterBudgets,
+    costCenterBlockedDates: {},
+    totalAicGrossAmount: 0,
     remainingProductBudgetByName: new Map<ProductBudgetName, number>(Object.entries(options.productBudgetsUsd ?? {})
       .map(([name, amount]) => [name as ProductBudgetName, normalizeBudget(amount)])),
     remainingOrganizationIncludedCredits: context.organizationIncludedCreditsPool,
@@ -144,6 +187,28 @@ function setRemainingIncludedCredits(
   return currentRemainingOrganizationIncludedCredits
 }
 
+function getEffectiveUserBudget(
+  state: BudgetSimulationState,
+  budgetSubject: string | null,
+): number {
+  if (!budgetSubject) return Number.POSITIVE_INFINITY
+
+  // Power user override takes precedence
+  const powerUserBudget = state.powerUserBudgets.get(budgetSubject)
+  if (powerUserBudget !== undefined) {
+    return state.remainingUserBudgetByUser.get(budgetSubject) ?? powerUserBudget
+  }
+
+  // Fall back to universal user budget
+  if (state.userBudgetCap === Number.POSITIVE_INFINITY) return Number.POSITIVE_INFINITY
+  return state.remainingUserBudgetByUser.get(budgetSubject) ?? state.userBudgetCap
+}
+
+function getCostCenterName(record: TokenUsageRecord): string | null {
+  const name = record.cost_center_name?.trim()
+  return name || null
+}
+
 function simulateBudgetRecord(
   state: BudgetSimulationState,
   record: TokenUsageRecord,
@@ -151,6 +216,7 @@ function simulateBudgetRecord(
 ): void {
     const budgetSubject = getBudgetSubject(record)
     const productBudgetName = getProductBudgetName(record)
+    const costCenterName = getCostCenterName(record)
     const { requests } = getUsageMetrics(record)
     const { aicQuantity, aicGrossAmount } = getAicUsageMetrics(record)
     if (aicQuantity <= 0 || aicGrossAmount <= 0) {
@@ -162,6 +228,17 @@ function simulateBudgetRecord(
       return
     }
 
+    // Track total gross for consumption % calculations
+    state.totalAicGrossAmount += aicGrossAmount
+
+    // Track per-CC gross consumption (even for CCs without a budget)
+    if (costCenterName) {
+      const ccState = state.costCenterBudgets.get(costCenterName)
+      if (ccState) {
+        ccState.totalAicGrossConsumed += aicGrossAmount
+      }
+    }
+
     if (context.reportPlanScope !== 'organization') {
       const individualIncludedCreditKey = getIndividualIncludedCreditKey(record)
       if (individualIncludedCreditKey) {
@@ -169,10 +246,6 @@ function simulateBudgetRecord(
       }
     }
 
-    const remainingUserBudget = state.userBudgetCap === Number.POSITIVE_INFINITY
-      ? Number.POSITIVE_INFINITY
-      : (budgetSubject ? (state.remainingUserBudgetByUser.get(budgetSubject) ?? state.userBudgetCap) : Number.POSITIVE_INFINITY)
-    const remainingProductBudget = state.remainingProductBudgetByName.get(productBudgetName) ?? Number.POSITIVE_INFINITY
     const remainingIncludedCredits = getRemainingIncludedCredits(
       record,
       context,
@@ -180,32 +253,62 @@ function simulateBudgetRecord(
       state.remainingMonthlyIncludedCredits,
     )
 
-    const maxQuantityByUserBudget = remainingUserBudget === Number.POSITIVE_INFINITY
-      ? aicQuantity
-      : Math.min(aicQuantity, remainingUserBudget / costPerAic)
+    // --- Gate order per spec §4: account → cost center → user → product ---
+
+    // Gate 2: Account additional-spend cap
     const maxQuantityByAccountBudget = getMaxQuantityByAdditionalSpendBudget(
       aicQuantity,
       remainingIncludedCredits,
       state.remainingAccountBudget,
       costPerAic,
     )
+
+    // Gate 3: Cost center additional-spend cap (bypass if no CC or no CC budget)
+    const ccBudgetState = costCenterName ? state.costCenterBudgets.get(costCenterName) : undefined
+    const remainingCcBudget = ccBudgetState ? ccBudgetState.remainingBudget : Number.POSITIVE_INFINITY
+    const maxQuantityByCcBudget = getMaxQuantityByAdditionalSpendBudget(
+      aicQuantity,
+      remainingIncludedCredits,
+      remainingCcBudget,
+      costPerAic,
+    )
+
+    // Gate 4: User total-usage cap (covers pool + additional)
+    const remainingUserBudget = getEffectiveUserBudget(state, budgetSubject)
+    const maxQuantityByUserBudget = remainingUserBudget === Number.POSITIVE_INFINITY
+      ? aicQuantity
+      : Math.min(aicQuantity, remainingUserBudget / costPerAic)
+
+    // Product budget (app-specific extension, after spec gates)
+    const remainingProductBudget = state.remainingProductBudgetByName.get(productBudgetName) ?? Number.POSITIVE_INFINITY
     const maxQuantityByProductBudget = getMaxQuantityByAdditionalSpendBudget(
       aicQuantity,
       remainingIncludedCredits,
       remainingProductBudget,
       costPerAic,
     )
-    const allowedQuantity = Math.max(0, Math.min(aicQuantity, maxQuantityByUserBudget, maxQuantityByAccountBudget, maxQuantityByProductBudget))
+
+    // Lowest headroom wins
+    const allowedQuantity = Math.max(0, Math.min(aicQuantity, maxQuantityByAccountBudget, maxQuantityByCcBudget, maxQuantityByUserBudget, maxQuantityByProductBudget))
     const allowedRatio = allowedQuantity / aicQuantity
-    const userBudgetLimited = maxQuantityByUserBudget < aicQuantity
-      && maxQuantityByUserBudget <= maxQuantityByAccountBudget
-      && maxQuantityByUserBudget <= maxQuantityByProductBudget
+
+    // Determine which gate is the binding constraint (spec: "lowest remaining headroom wins")
     const accountBudgetLimited = maxQuantityByAccountBudget < aicQuantity
+      && maxQuantityByAccountBudget <= maxQuantityByCcBudget
       && maxQuantityByAccountBudget <= maxQuantityByUserBudget
       && maxQuantityByAccountBudget <= maxQuantityByProductBudget
+    const ccBudgetLimited = maxQuantityByCcBudget < aicQuantity
+      && maxQuantityByCcBudget <= maxQuantityByAccountBudget
+      && maxQuantityByCcBudget <= maxQuantityByUserBudget
+      && maxQuantityByCcBudget <= maxQuantityByProductBudget
+    const userBudgetLimited = maxQuantityByUserBudget < aicQuantity
+      && maxQuantityByUserBudget <= maxQuantityByAccountBudget
+      && maxQuantityByUserBudget <= maxQuantityByCcBudget
+      && maxQuantityByUserBudget <= maxQuantityByProductBudget
     const productBudgetLimited = maxQuantityByProductBudget < aicQuantity
-      && maxQuantityByProductBudget <= maxQuantityByUserBudget
       && maxQuantityByProductBudget <= maxQuantityByAccountBudget
+      && maxQuantityByProductBudget <= maxQuantityByCcBudget
+      && maxQuantityByProductBudget <= maxQuantityByUserBudget
 
     if (allowedRatio < 1) {
       state.blockedRequests += requests * (1 - allowedRatio)
@@ -224,6 +327,9 @@ function simulateBudgetRecord(
           state.accountBlockedDate = record.date || null
         }
       }
+      if (costCenterName && ccBudgetState && remainingCcBudget <= 0 && remainingIncludedCredits <= 0 && record.date && state.costCenterBlockedDates[costCenterName] === undefined) {
+        state.costCenterBlockedDates[costCenterName] = record.date
+      }
       if (remainingProductBudget <= 0 && remainingIncludedCredits <= 0 && record.date && state.productBlockedDates[productBudgetName] === undefined) {
         state.productBlockedDates[productBudgetName] = record.date
       }
@@ -239,12 +345,11 @@ function simulateBudgetRecord(
     if (additionalSpendAmount > 0 && record.date) {
       state.adjustedDailyNetCostByDate.set(record.date, (state.adjustedDailyNetCostByDate.get(record.date) ?? 0) + additionalSpendAmount)
     }
+
+    // Update account budget state
     if (accountBudgetLimited && allowedQuantity > remainingIncludedCredits && state.accountBlockedDate === null) {
       state.accountBlockedDate = record.date || null
       state.budgetExhausted = true
-    }
-    if (productBudgetLimited && allowedQuantity > remainingIncludedCredits && record.date && state.productBlockedDates[productBudgetName] === undefined) {
-      state.productBlockedDates[productBudgetName] = record.date
     }
     if (state.remainingAccountBudget !== Number.POSITIVE_INFINITY) {
       const nextRemainingAccountBudget = Math.max(state.remainingAccountBudget - additionalSpendAmount, 0)
@@ -260,8 +365,30 @@ function simulateBudgetRecord(
       state.remainingAccountBudget = nextRemainingAccountBudget
     }
 
-    if (budgetSubject && remainingUserBudget !== Number.POSITIVE_INFINITY) {
-      state.remainingUserBudgetByUser.set(budgetSubject, Math.max(remainingUserBudget - allowedGrossAmount, 0))
+    // Update cost center budget state
+    if (costCenterName && ccBudgetState) {
+      ccBudgetState.additionalSpendConsumed += additionalSpendAmount
+      if (ccBudgetState.remainingBudget !== Number.POSITIVE_INFINITY) {
+        const nextRemainingCcBudget = Math.max(ccBudgetState.remainingBudget - additionalSpendAmount, 0)
+        if (
+          nextRemainingCcBudget <= 0
+          && additionalSpendAmount > 0
+          && remainingIncludedCredits <= 0
+          && record.date
+          && state.costCenterBlockedDates[costCenterName] === undefined
+        ) {
+          state.costCenterBlockedDates[costCenterName] = record.date
+        }
+        ccBudgetState.remainingBudget = nextRemainingCcBudget
+      }
+      if (ccBudgetLimited && allowedQuantity > remainingIncludedCredits && record.date && state.costCenterBlockedDates[costCenterName] === undefined) {
+        state.costCenterBlockedDates[costCenterName] = record.date
+      }
+    }
+
+    // Update product budget state
+    if (productBudgetLimited && allowedQuantity > remainingIncludedCredits && record.date && state.productBlockedDates[productBudgetName] === undefined) {
+      state.productBlockedDates[productBudgetName] = record.date
     }
     if (remainingProductBudget !== Number.POSITIVE_INFINITY) {
       const nextRemainingProductBudget = Math.max(remainingProductBudget - additionalSpendAmount, 0)
@@ -275,6 +402,11 @@ function simulateBudgetRecord(
         state.productBlockedDates[productBudgetName] = record.date
       }
       state.remainingProductBudgetByName.set(productBudgetName, nextRemainingProductBudget)
+    }
+
+    // Update user budget state
+    if (budgetSubject && remainingUserBudget !== Number.POSITIVE_INFINITY) {
+      state.remainingUserBudgetByUser.set(budgetSubject, Math.max(remainingUserBudget - allowedGrossAmount, 0))
     }
 
     state.remainingOrganizationIncludedCredits = setRemainingIncludedCredits(
@@ -297,6 +429,30 @@ function finalizeBudgetSimulation(
       0,
     )
 
+  const costCenterResults: CostCenterSimulationResult[] = Array.from(state.costCenterBudgets.entries())
+    .map(([costCenterName, ccState]) => {
+      const budgetUsd = ccState.additionalSpendConsumed + ccState.remainingBudget
+      const additionalSpendConsumed = ccState.additionalSpendConsumed
+      const amountBlocked = Math.max(0, budgetUsd - additionalSpendConsumed) <= 0
+        ? 0  // budget was fully consumed
+        : 0
+      const utilizationPercent = budgetUsd > 0 ? Math.min(100, (additionalSpendConsumed / budgetUsd) * 100) : 0
+      const consumptionPercent = state.totalAicGrossAmount > 0
+        ? (ccState.totalAicGrossConsumed / state.totalAicGrossAmount) * 100
+        : 0
+
+      return {
+        costCenterName,
+        budgetUsd,
+        additionalSpendConsumed,
+        amountBlocked: Math.max(0, additionalSpendConsumed - budgetUsd + ccState.remainingBudget),
+        utilizationPercent,
+        exhaustionDate: state.costCenterBlockedDates[costCenterName] ?? null,
+        consumptionPercent,
+      }
+    })
+    .sort((a, b) => b.consumptionPercent - a.consumptionPercent)
+
   return {
     totalBill: state.totalBill,
     blockedUsers: state.blockedUsers.size,
@@ -305,6 +461,8 @@ function finalizeBudgetSimulation(
     budgetExhausted: state.budgetExhausted,
     firstUserBlockedDate: state.firstUserBlockedDate,
     accountBlockedDate: state.accountBlockedDate,
+    costCenterBlockedDates: state.costCenterBlockedDates,
+    costCenterResults,
     productBlockedDates: state.productBlockedDates,
     adjustedDailyNetCostByDate: Array.from(state.adjustedDailyNetCostByDate.entries())
       .sort((a, b) => a[0].localeCompare(b[0]))

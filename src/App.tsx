@@ -61,6 +61,8 @@ function App() {
   const [rowsProcessed, setRowsProcessed] = useState(0)
   const [seatOverrides, setSeatOverrides] = useState<SeatOverrides>({})
   const [budgetValues, setBudgetValues] = useState<BudgetValues>(EMPTY_BUDGET_VALUES)
+  const [costCenterBudgets, setCostCenterBudgets] = useState<Record<string, string>>({})
+  const [powerUserBudgets, setPowerUserBudgets] = useState<Record<string, string>>({})
   const [budgetSimulation, setBudgetSimulation] = useState<BudgetSimulationResult | null>(null)
   const [budgetSimulationError, setBudgetSimulationError] = useState<string | null>(null)
   const [isApplyingBudgetSimulation, setIsApplyingBudgetSimulation] = useState(false)
@@ -183,6 +185,8 @@ function App() {
     setRowsProcessed(0)
     setSeatOverrides({})
     setBudgetValues(EMPTY_BUDGET_VALUES)
+    setCostCenterBudgets({})
+    setPowerUserBudgets({})
     setBudgetSimulation(null)
     setBudgetSimulationError(null)
     setIsApplyingBudgetSimulation(false)
@@ -262,6 +266,45 @@ function App() {
     setIsApplyingBudgetSimulation(false)
   }, [])
 
+  const handleCostCenterBudgetChange = useCallback((costCenterName: string, value: string) => {
+    latestSimulationIdRef.current += 1
+    setCostCenterBudgets((current) => ({ ...current, [costCenterName]: value }))
+    setBudgetSimulation(null)
+    setBudgetSimulationError(null)
+    setIsApplyingBudgetSimulation(false)
+  }, [])
+
+  const handlePowerUserBudgetChange = useCallback((username: string, value: string) => {
+    latestSimulationIdRef.current += 1
+    setPowerUserBudgets((current) => ({ ...current, [username]: value }))
+    setBudgetSimulation(null)
+    setBudgetSimulationError(null)
+    setIsApplyingBudgetSimulation(false)
+  }, [])
+
+  const handleAddPowerUser = useCallback((username: string) => {
+    latestSimulationIdRef.current += 1
+    setPowerUserBudgets((current) => {
+      if (username in current) return current
+      return { ...current, [username]: '' }
+    })
+    setBudgetSimulation(null)
+    setBudgetSimulationError(null)
+    setIsApplyingBudgetSimulation(false)
+  }, [])
+
+  const handleRemovePowerUser = useCallback((username: string) => {
+    latestSimulationIdRef.current += 1
+    setPowerUserBudgets((current) => {
+      const next = { ...current }
+      delete next[username]
+      return next
+    })
+    setBudgetSimulation(null)
+    setBudgetSimulationError(null)
+    setIsApplyingBudgetSimulation(false)
+  }, [])
+
   const handleSeatOverridesChange = useCallback(async (overrides: SeatOverrides) => {
     const file = currentFileRef.current
     if (!file) return
@@ -299,12 +342,30 @@ function App() {
     const parsedProductSparkBudget = !isIndividualBudgetReport && budgetValues.productSpark.trim() !== '' ? Number(budgetValues.productSpark) : undefined
     const parsedProductCopilotBudget = !isIndividualBudgetReport && budgetValues.productCopilot.trim() !== '' ? Number(budgetValues.productCopilot) : undefined
 
+    const parsedCostCenterBudgets: Record<string, number> = {}
+    for (const [name, value] of Object.entries(costCenterBudgets)) {
+      if (value.trim() !== '') {
+        parsedCostCenterBudgets[name] = Number(value)
+      }
+    }
+    const hasCostCenterBudgets = Object.keys(parsedCostCenterBudgets).length > 0
+
+    const parsedPowerUserBudgets: Record<string, number> = {}
+    for (const [name, value] of Object.entries(powerUserBudgets)) {
+      if (value.trim() !== '') {
+        parsedPowerUserBudgets[name] = Number(value)
+      }
+    }
+    const hasPowerUserBudgets = Object.keys(parsedPowerUserBudgets).length > 0
+
     if (
       parsedAccountBudget === undefined
       && parsedUserBudget === undefined
       && parsedProductCloudAgentBudget === undefined
       && parsedProductSparkBudget === undefined
       && parsedProductCopilotBudget === undefined
+      && !hasCostCenterBudgets
+      && !hasPowerUserBudgets
     ) {
       setBudgetSimulation(null)
       setBudgetSimulationError(isIndividualBudgetReport
@@ -319,6 +380,8 @@ function App() {
       || (parsedProductCloudAgentBudget !== undefined && !Number.isFinite(parsedProductCloudAgentBudget))
       || (parsedProductSparkBudget !== undefined && !Number.isFinite(parsedProductSparkBudget))
       || (parsedProductCopilotBudget !== undefined && !Number.isFinite(parsedProductCopilotBudget))
+      || Object.values(parsedCostCenterBudgets).some((v) => !Number.isFinite(v))
+      || Object.values(parsedPowerUserBudgets).some((v) => !Number.isFinite(v))
     ) {
       setBudgetSimulation(null)
       setBudgetSimulationError('Enter valid USD budget values before running the simulation.')
@@ -335,6 +398,8 @@ function App() {
         {
           accountBudgetUsd: parsedAccountBudget,
           userBudgetUsd: parsedUserBudget,
+          costCenterBudgetsUsd: hasCostCenterBudgets ? parsedCostCenterBudgets : undefined,
+          powerUserBudgetsUsd: hasPowerUserBudgets ? parsedPowerUserBudgets : undefined,
           productBudgetsUsd: {
             [PRODUCT_BUDGET_COPILOT_CLOUD_AGENT]: parsedProductCloudAgentBudget,
             [PRODUCT_BUDGET_SPARK]: parsedProductSparkBudget,
@@ -361,6 +426,8 @@ function App() {
     budgetValues.productCopilot,
     budgetValues.productSpark,
     budgetValues.user,
+    costCenterBudgets,
+    powerUserBudgets,
     resolveIncludedCreditOverrides,
     seatOverrides,
     userUsage,
@@ -697,6 +764,10 @@ function App() {
                <div className={viewContentClasses}>
                   <CostManagementView
                     budgetValues={budgetValues}
+                    costCenterBudgets={costCenterBudgets}
+                    powerUserBudgets={powerUserBudgets}
+                    costCenters={costCenters?.costCenters ?? []}
+                    users={userUsage?.users ?? []}
                     isIndividualReport={isIndividualReport}
                     currentPruBill={overviewPruNetAmount}
                     currentPruGrossAmount={overviewTotals.grossAmount}
@@ -714,6 +785,10 @@ function App() {
                     budgetSimulationError={budgetSimulationError}
                     isApplyingBudgetSimulation={isApplyingBudgetSimulation}
                     onBudgetValueChange={handleBudgetValueChange}
+                    onCostCenterBudgetChange={handleCostCenterBudgetChange}
+                    onPowerUserBudgetChange={handlePowerUserBudgetChange}
+                    onAddPowerUser={handleAddPowerUser}
+                    onRemovePowerUser={handleRemovePowerUser}
                     onApplyBudgetSimulation={handleApplyBudgetSimulation}
                   />
                 </div>
