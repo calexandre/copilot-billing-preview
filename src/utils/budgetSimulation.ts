@@ -3,6 +3,14 @@ import { getAicUsageMetrics, getUsageMetrics, parseNormalizedTokenUsageRecord, p
 import { getProductBudgetName, isNonCopilotCodeReviewUsage, NON_COPILOT_CODE_REVIEW_USER_LABEL, type ProductBudgetName } from '../pipeline/productClassification'
 import { streamLines } from '../pipeline/streamer'
 
+export type CostCenterUserBreakdown = {
+  username: string
+  grossConsumed: number
+  totalGrossConsumed: number
+  budgetUsd: number
+  blockedDate: string | null
+}
+
 export type CostCenterSimulationResult = {
   costCenterName: string
   budgetUsd: number
@@ -11,6 +19,7 @@ export type CostCenterSimulationResult = {
   utilizationPercent: number
   exhaustionDate: string | null
   consumptionPercent: number
+  userBreakdowns: CostCenterUserBreakdown[]
 }
 
 export type BudgetSimulationResult = {
@@ -42,6 +51,9 @@ type CostCenterBudgetState = {
   additionalSpendConsumed: number
   totalAicGrossConsumed: number
   exhaustionDate: string | null
+  userGrossConsumed: Map<string, number>
+  userTotalGrossConsumed: Map<string, number>
+  userBlockedDates: Map<string, string>
 }
 
 type BudgetSimulationState = {
@@ -121,6 +133,9 @@ function createBudgetSimulationState(
         additionalSpendConsumed: 0,
         totalAicGrossConsumed: 0,
         exhaustionDate: null,
+        userGrossConsumed: new Map(),
+        userTotalGrossConsumed: new Map(),
+        userBlockedDates: new Map(),
       })
     }
   }
@@ -239,6 +254,9 @@ function simulateBudgetRecord(
       const ccState = state.costCenterBudgets.get(costCenterName)
       if (ccState) {
         ccState.totalAicGrossConsumed += aicGrossAmount
+        if (budgetSubject) {
+          ccState.userTotalGrossConsumed.set(budgetSubject, (ccState.userTotalGrossConsumed.get(budgetSubject) ?? 0) + aicGrossAmount)
+        }
       }
     }
 
@@ -317,6 +335,12 @@ function simulateBudgetRecord(
       state.blockedRequests += requests * (1 - allowedRatio)
       if (budgetSubject) {
         state.blockedUsers.add(budgetSubject)
+        if (costCenterName) {
+          const ccState = state.costCenterBudgets.get(costCenterName)
+          if (ccState && !ccState.userBlockedDates.has(budgetSubject) && record.date) {
+            ccState.userBlockedDates.set(budgetSubject, record.date)
+          }
+        }
       }
       if (userBudgetLimited && state.firstUserBlockedDate === null) {
         state.firstUserBlockedDate = record.date || null
@@ -413,6 +437,14 @@ function simulateBudgetRecord(
       state.remainingUserBudgetByUser.set(budgetSubject, Math.max(remainingUserBudget - allowedGrossAmount, 0))
     }
 
+    // Track per-user allowed consumption within cost centers
+    if (costCenterName && budgetSubject) {
+      const ccState = state.costCenterBudgets.get(costCenterName)
+      if (ccState) {
+        ccState.userGrossConsumed.set(budgetSubject, (ccState.userGrossConsumed.get(budgetSubject) ?? 0) + allowedGrossAmount)
+      }
+    }
+
     state.remainingOrganizationIncludedCredits = setRemainingIncludedCredits(
       record,
       context,
@@ -442,6 +474,27 @@ function finalizeBudgetSimulation(
         ? (ccState.totalAicGrossConsumed / state.totalAicGrossAmount) * 100
         : 0
 
+      const userBreakdowns: CostCenterUserBreakdown[] = Array.from(ccState.userGrossConsumed.entries())
+        .map(([username, grossConsumed]) => {
+          const userBudget = state.powerUserBudgets.get(username) ?? state.userBudgetCap
+          return {
+            username,
+            grossConsumed,
+            totalGrossConsumed: ccState.userTotalGrossConsumed.get(username) ?? grossConsumed,
+            budgetUsd: userBudget === Number.POSITIVE_INFINITY ? 0 : userBudget,
+            blockedDate: ccState.userBlockedDates.get(username) ?? null,
+          }
+        })
+        .sort((a, b) => {
+          if (a.blockedDate && b.blockedDate) {
+            const dateCmp = a.blockedDate.localeCompare(b.blockedDate)
+            return dateCmp !== 0 ? dateCmp : b.totalGrossConsumed - a.totalGrossConsumed
+          }
+          if (a.blockedDate) return -1
+          if (b.blockedDate) return 1
+          return b.totalGrossConsumed - a.totalGrossConsumed
+        })
+
       return {
         costCenterName,
         budgetUsd,
@@ -450,6 +503,7 @@ function finalizeBudgetSimulation(
         utilizationPercent,
         exhaustionDate: state.costCenterBlockedDates[costCenterName] ?? null,
         consumptionPercent,
+        userBreakdowns,
       }
     })
     .sort((a, b) => b.consumptionPercent - a.consumptionPercent)

@@ -838,6 +838,20 @@ export function CostManagementView({
                       {cc.exhaustionDate && (
                         <span className="text-xs text-fg-danger">Exhausted: {formatSimulationDate(cc.exhaustionDate)}</span>
                       )}
+                      {cc.userBreakdowns.length > 0 && (
+                        <details className="mt-1">
+                          <summary className="text-xs text-fg-muted cursor-pointer hover:text-fg-default select-none">
+                            {cc.userBreakdowns.length} user{cc.userBreakdowns.length !== 1 ? 's' : ''}
+                          </summary>
+                          <ul className="m-0 mt-1 p-0 list-none flex flex-col gap-0.5 max-h-40 overflow-y-auto">
+                            {cc.userBreakdowns.map((u) => (
+                              <li key={u.username} className="text-xs text-fg-muted font-mono leading-tight">
+                                {u.username} {formatUsd(u.grossConsumed)}{u.budgetUsd > 0 ? `/${formatUsd(u.budgetUsd)}` : ''}{u.budgetUsd > 0 ? ` (${Math.min(100, Math.round((u.grossConsumed / u.budgetUsd) * 100))}%)` : ''}{u.totalGrossConsumed > u.grossConsumed ? ` [total: ${formatUsd(u.totalGrossConsumed)}]` : ''}{u.blockedDate ? ` · blocked ${formatSimulationDate(u.blockedDate)}` : ''}
+                              </li>
+                            ))}
+                          </ul>
+                        </details>
+                      )}
                     </div>
                   ))}
                 </div>
