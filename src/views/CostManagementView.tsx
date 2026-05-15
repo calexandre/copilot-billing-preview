@@ -154,6 +154,8 @@ export function CostManagementView({
   onApplyBudgetSimulation,
 }: CostManagementViewProps) {
   const [powerUserInput, setPowerUserInput] = useState('')
+  const [powerUserAutoFillCount, setPowerUserAutoFillCount] = useState('')
+  const [powerUserAutoFillBudget, setPowerUserAutoFillBudget] = useState('')
   const [costCenterAutoFillCap, setCostCenterAutoFillCap] = useState('')
   const visibleAccountBudgetFields = isIndividualReport ? INDIVIDUAL_BUDGET_FIELDS : ACCOUNT_BUDGET_FIELDS
   const hasCostCenterBudgetValue = Object.values(costCenterBudgets).some((v) => v.trim() !== '')
@@ -182,6 +184,35 @@ export function CostManagementView({
       .slice(0, 10)
       .map((u) => u.username)
   }, [powerUserInput, powerUserBudgets, users])
+
+  const powerUserAutoFillCountParsed = powerUserAutoFillCount.trim() !== '' ? parseInt(powerUserAutoFillCount, 10) : undefined
+  const powerUserAutoFillBudgetParsed = powerUserAutoFillBudget.trim() !== '' ? Number(powerUserAutoFillBudget) : undefined
+  const isPowerUserAutoFillEnabled = powerUserAutoFillCountParsed !== undefined
+    && Number.isFinite(powerUserAutoFillCountParsed) && powerUserAutoFillCountParsed > 0
+    && powerUserAutoFillBudgetParsed !== undefined
+    && Number.isFinite(powerUserAutoFillBudgetParsed) && powerUserAutoFillBudgetParsed > 0
+
+  const handleAutoFillPowerUserBudgets = () => {
+    if (!isPowerUserAutoFillEnabled) return
+
+    const count = powerUserAutoFillCountParsed!
+    const budget = sanitizeUsdInput(String(powerUserAutoFillBudgetParsed!))
+
+    // Remove existing power users
+    for (const username of Object.keys(powerUserBudgets)) {
+      onRemovePowerUser(username)
+    }
+
+    // Select top N users by AIC consumption
+    const topUsers = [...users]
+      .sort((a, b) => b.totals.aicQuantity - a.totals.aicQuantity)
+      .slice(0, count)
+
+    // Assign the budget to each
+    for (const user of topUsers) {
+      onPowerUserBudgetChange(user.username, budget)
+    }
+  }
 
   const accountBudgetParsed = budgetValues.account.trim() !== '' ? Number(budgetValues.account) : undefined
   const accountBudgetValue = accountBudgetParsed !== undefined && Number.isFinite(accountBudgetParsed)
@@ -455,6 +486,47 @@ export function CostManagementView({
               </div>
 
               <div className="flex flex-col gap-3">
+                <div className="grid grid-cols-1 xl:grid-cols-[1fr_1fr_auto] gap-3 items-end">
+                  <label className="flex flex-col gap-1">
+                    <span className="text-[13px] font-medium text-fg-default">Number of power users</span>
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      className="w-full rounded-md border border-border-default bg-bg-default px-3 py-2.5 text-sm text-fg-default outline-none focus:border-fg-accent focus:shadow-[0_0_0_3px_rgba(9,105,218,0.3)]"
+                      value={powerUserAutoFillCount}
+                      onChange={(e) => setPowerUserAutoFillCount(sanitizeWholeNumberInput(e.target.value))}
+                      placeholder="e.g. 50"
+                      aria-label="Number of power users to auto-fill"
+                    />
+                  </label>
+                  <label className="flex flex-col gap-1">
+                    <span className="text-[13px] font-medium text-fg-default">Budget per power user</span>
+                    <div className="flex items-center rounded-md border border-border-default bg-bg-default focus-within:border-fg-accent focus-within:shadow-[0_0_0_3px_rgba(9,105,218,0.3)]">
+                      <span className="pl-3 text-sm font-medium text-fg-muted" aria-hidden>$</span>
+                      <input
+                        type="text"
+                        inputMode="decimal"
+                        className="w-full border-0 bg-transparent px-2 py-2.5 text-sm text-fg-default outline-none"
+                        value={powerUserAutoFillBudget}
+                        onChange={(e) => setPowerUserAutoFillBudget(sanitizeUsdInput(e.target.value))}
+                        placeholder="0.00"
+                        aria-label="Power user budget amount"
+                      />
+                    </div>
+                  </label>
+                  <button
+                    type="button"
+                    className="px-3 py-2 text-[13px] font-medium border border-border-default rounded-md bg-bg-default text-fg-default cursor-pointer hover:bg-bg-muted disabled:opacity-50 disabled:cursor-default"
+                    onClick={handleAutoFillPowerUserBudgets}
+                    disabled={!isPowerUserAutoFillEnabled}
+                  >
+                    Auto-fill power user budgets
+                  </button>
+                </div>
+                <p className="m-0 text-[13px] text-fg-muted">
+                  Selects the top users by AIC consumption and assigns them the specified budget. Replaces any existing power user entries.
+                </p>
+
                 <div className="flex gap-2">
                   <div className="relative flex-1">
                     <input
