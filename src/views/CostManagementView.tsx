@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { DualAxisLineChart } from '../components'
 import { BillingTotalsCards } from '../components/ui'
 import { PRODUCT_BUDGET_COPILOT, PRODUCT_BUDGET_COPILOT_CLOUD_AGENT, PRODUCT_BUDGET_SPARK } from '../pipeline/productClassification'
-import type { BudgetSimulationResult, CostCenterSimulationResult } from '../utils/budgetSimulation'
+import type { BudgetSimulationResult, CostCenterSimulationResult, CostCenterUserBreakdown } from '../utils/budgetSimulation'
 import type { DailyUsageData } from '../pipeline/aggregators/dailyUsageAggregator'
 import type { CostCenterUsage } from '../pipeline/aggregators/costCenterAggregator'
 import type { UserUsage } from '../pipeline/aggregators/userUsageAggregator'
@@ -829,7 +829,7 @@ export function CostManagementView({
             {!isIndividualReport && budgetSimulation.costCenterResults.length > 0 && (
               <div className="flex flex-col gap-2">
                 <strong className="text-sm font-semibold text-fg-default">Cost center breakdown</strong>
-                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 xl:grid-cols-2 gap-3">
                   {budgetSimulation.costCenterResults.map((cc: CostCenterSimulationResult) => (
                     <div key={cc.costCenterName} className="bg-bg-muted border border-border-default rounded-md px-4 py-3 flex flex-col gap-1">
                       <span className="text-sm font-semibold text-fg-default">{cc.costCenterName}</span>
@@ -843,13 +843,7 @@ export function CostManagementView({
                           <summary className="text-xs text-fg-muted cursor-pointer hover:text-fg-default select-none">
                             {cc.userBreakdowns.length} user{cc.userBreakdowns.length !== 1 ? 's' : ''}
                           </summary>
-                          <ul className="m-0 mt-1 p-0 list-none flex flex-col gap-0.5 max-h-40 overflow-y-auto">
-                            {cc.userBreakdowns.map((u) => (
-                              <li key={u.username} className="text-xs text-fg-muted font-mono leading-tight">
-                                {u.username} {formatUsd(u.grossConsumed)}{u.budgetUsd > 0 ? `/${formatUsd(u.budgetUsd)}` : ''}{u.budgetUsd > 0 ? ` (${Math.min(100, Math.round((u.grossConsumed / u.budgetUsd) * 100))}%)` : ''}{u.totalGrossConsumed > u.grossConsumed ? ` [total: ${formatUsd(u.totalGrossConsumed)}]` : ''}{u.blockedDate ? ` · blocked ${formatSimulationDate(u.blockedDate)}` : ''}
-                              </li>
-                            ))}
-                          </ul>
+                          <CostCenterUserTable users={cc.userBreakdowns} />
                         </details>
                       )}
                     </div>
@@ -903,6 +897,95 @@ function SimulationSummaryCard({ label, value }: SimulationSummaryCardProps) {
     <div className="bg-bg-muted border border-border-default rounded-md px-5 py-4 flex flex-col gap-1">
       <span className="text-xs font-medium text-fg-muted uppercase tracking-wider">{label}</span>
       <span className="text-2xl font-bold text-fg-default tabular-nums">{value}</span>
+    </div>
+  )
+}
+
+type CcUserSortKey = 'user' | 'allowed' | 'budget' | 'pct' | 'total' | 'blocked'
+
+const CC_USER_COLUMNS: Array<{ key: CcUserSortKey; abbr: string; title: string; align?: 'right' }> = [
+  { key: 'user', abbr: 'User', title: 'Username' },
+  { key: 'allowed', abbr: 'Allowed', title: 'Allowed consumption (AIC gross used before block)', align: 'right' },
+  { key: 'budget', abbr: 'Budget', title: 'User-level budget', align: 'right' },
+  { key: 'pct', abbr: '%', title: 'Consumption as percentage of budget', align: 'right' },
+  { key: 'total', abbr: 'Total', title: 'Total consumption (including usage that would have occurred without budgets)', align: 'right' },
+  { key: 'blocked', abbr: 'Blocked', title: 'Date the user was first blocked' },
+]
+
+function CostCenterUserTable({ users }: { users: CostCenterUserBreakdown[] }) {
+  const [sortKey, setSortKey] = useState<CcUserSortKey>('blocked')
+  const [sortAsc, setSortAsc] = useState(true)
+
+  const sorted = useMemo(() => {
+    const copy = [...users]
+    copy.sort((a, b) => {
+      let cmp = 0
+      switch (sortKey) {
+        case 'user': cmp = a.username.localeCompare(b.username); break
+        case 'allowed': cmp = a.grossConsumed - b.grossConsumed; break
+        case 'budget': cmp = a.budgetUsd - b.budgetUsd; break
+        case 'pct': {
+          const pctA = a.budgetUsd > 0 ? a.grossConsumed / a.budgetUsd : 0
+          const pctB = b.budgetUsd > 0 ? b.grossConsumed / b.budgetUsd : 0
+          cmp = pctA - pctB
+          break
+        }
+        case 'total': cmp = a.totalGrossConsumed - b.totalGrossConsumed; break
+        case 'blocked': {
+          if (a.blockedDate && b.blockedDate) cmp = a.blockedDate.localeCompare(b.blockedDate)
+          else if (a.blockedDate) cmp = -1
+          else if (b.blockedDate) cmp = 1
+          else cmp = b.totalGrossConsumed - a.totalGrossConsumed
+          break
+        }
+      }
+      return sortAsc ? cmp : -cmp
+    })
+    return copy
+  }, [users, sortKey, sortAsc])
+
+  const handleSort = (key: CcUserSortKey) => {
+    if (sortKey === key) {
+      setSortAsc(!sortAsc)
+    } else {
+      setSortKey(key)
+      setSortAsc(key === 'user' || key === 'blocked')
+    }
+  }
+
+  return (
+    <div className="mt-1 overflow-x-auto max-h-52 overflow-y-auto">
+      <table className="w-full text-xs border-collapse">
+        <thead className="sticky top-0 bg-bg-muted">
+          <tr>
+            {CC_USER_COLUMNS.map((col) => (
+              <th
+                key={col.key}
+                title={col.title}
+                className={`px-1.5 py-1 font-medium text-fg-muted cursor-pointer hover:text-fg-default select-none whitespace-nowrap border-b border-border-default ${col.align === 'right' ? 'text-right' : 'text-left'}`}
+                onClick={() => handleSort(col.key)}
+              >
+                {col.abbr}{sortKey === col.key ? (sortAsc ? ' ↑' : ' ↓') : ''}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {sorted.map((u) => {
+            const pct = u.budgetUsd > 0 ? Math.min(100, Math.round((u.grossConsumed / u.budgetUsd) * 100)) : null
+            return (
+              <tr key={u.username} className="border-b border-border-default last:border-b-0 hover:bg-bg-default/50">
+                <td className="px-1.5 py-0.5 text-fg-default font-mono whitespace-nowrap">{u.username}</td>
+                <td className="px-1.5 py-0.5 text-fg-muted tabular-nums text-right whitespace-nowrap">{formatUsd(u.grossConsumed)}</td>
+                <td className="px-1.5 py-0.5 text-fg-muted tabular-nums text-right whitespace-nowrap">{u.budgetUsd > 0 ? formatUsd(u.budgetUsd) : '—'}</td>
+                <td className="px-1.5 py-0.5 text-fg-muted tabular-nums text-right whitespace-nowrap">{pct !== null ? `${pct}%` : '—'}</td>
+                <td className="px-1.5 py-0.5 text-fg-muted tabular-nums text-right whitespace-nowrap">{formatUsd(u.totalGrossConsumed)}</td>
+                <td className="px-1.5 py-0.5 text-fg-muted whitespace-nowrap">{u.blockedDate ? formatSimulationDate(u.blockedDate) : '—'}</td>
+              </tr>
+            )
+          })}
+        </tbody>
+      </table>
     </div>
   )
 }

@@ -460,6 +460,73 @@ describe('simulateBudgetFromRecords', () => {
     const dataResult = result.costCenterResults.find(cc => cc.costCenterName === 'Data')!
     expect(dataResult.consumptionPercent).toBeCloseTo(25, 0)
   })
+
+  it('user breakdowns show allowed consumption capped at user budget, not total', () => {
+    const result = simulateBudgetFromRecords([
+      createRecord({ date: '2026-06-01', username: 'mona', cost_center_name: 'Platform', quantity: 100, aic_quantity: 100, aic_gross_amount: 10 }),
+      createRecord({ date: '2026-06-02', username: 'mona', cost_center_name: 'Platform', quantity: 100, aic_quantity: 100, aic_gross_amount: 10 }),
+      createRecord({ date: '2026-06-03', username: 'octocat', cost_center_name: 'Platform', quantity: 50, aic_quantity: 50, aic_gross_amount: 5 }),
+    ], { userBudgetUsd: 12, costCenterBudgetsUsd: { Platform: 100 } }, pooledContext)
+
+    const platform = result.costCenterResults.find(cc => cc.costCenterName === 'Platform')!
+    expect(platform.userBreakdowns).toHaveLength(2)
+
+    const mona = platform.userBreakdowns.find(u => u.username === 'mona')!
+    expect(mona.grossConsumed).toBe(12)
+    expect(mona.totalGrossConsumed).toBe(20)
+    expect(mona.budgetUsd).toBe(12)
+
+    const octocat = platform.userBreakdowns.find(u => u.username === 'octocat')!
+    expect(octocat.grossConsumed).toBe(5)
+    expect(octocat.totalGrossConsumed).toBe(5)
+    expect(octocat.budgetUsd).toBe(12)
+  })
+
+  it('user breakdowns include blocked date for users that hit their budget', () => {
+    const result = simulateBudgetFromRecords([
+      createRecord({ date: '2026-06-01', username: 'mona', cost_center_name: 'Platform', quantity: 100, aic_quantity: 100, aic_gross_amount: 10 }),
+      createRecord({ date: '2026-06-02', username: 'mona', cost_center_name: 'Platform', quantity: 100, aic_quantity: 100, aic_gross_amount: 10 }),
+      createRecord({ date: '2026-06-03', username: 'octocat', cost_center_name: 'Platform', quantity: 50, aic_quantity: 50, aic_gross_amount: 5 }),
+    ], { userBudgetUsd: 15, costCenterBudgetsUsd: { Platform: 100 } }, pooledContext)
+
+    const platform = result.costCenterResults.find(cc => cc.costCenterName === 'Platform')!
+    const mona = platform.userBreakdowns.find(u => u.username === 'mona')!
+    expect(mona.blockedDate).toBe('2026-06-02')
+
+    const octocat = platform.userBreakdowns.find(u => u.username === 'octocat')!
+    expect(octocat.blockedDate).toBeNull()
+  })
+
+  it('user breakdowns are sorted by blocked date ascending then total consumption descending', () => {
+    const result = simulateBudgetFromRecords([
+      createRecord({ date: '2026-06-01', username: 'octocat', cost_center_name: 'Platform', quantity: 200, aic_quantity: 200, aic_gross_amount: 20 }),
+      createRecord({ date: '2026-06-02', username: 'mona', cost_center_name: 'Platform', quantity: 200, aic_quantity: 200, aic_gross_amount: 20 }),
+      createRecord({ date: '2026-06-03', username: 'hubot', cost_center_name: 'Platform', quantity: 50, aic_quantity: 50, aic_gross_amount: 5 }),
+    ], { userBudgetUsd: 10, costCenterBudgetsUsd: { Platform: 100 } }, pooledContext)
+
+    const platform = result.costCenterResults.find(cc => cc.costCenterName === 'Platform')!
+    const usernames = platform.userBreakdowns.map(u => u.username)
+    // octocat blocked on 06-01, mona blocked on 06-02, hubot unblocked (sorted by total desc)
+    expect(usernames).toEqual(['octocat', 'mona', 'hubot'])
+  })
+
+  it('user breakdowns use power user budget when set', () => {
+    const result = simulateBudgetFromRecords([
+      createRecord({ date: '2026-06-01', username: 'mona', cost_center_name: 'Platform', quantity: 100, aic_quantity: 100, aic_gross_amount: 10 }),
+      createRecord({ date: '2026-06-01', username: 'octocat', cost_center_name: 'Platform', quantity: 100, aic_quantity: 100, aic_gross_amount: 10 }),
+    ], { userBudgetUsd: 5, powerUserBudgetsUsd: { mona: 20 }, costCenterBudgetsUsd: { Platform: 100 } }, pooledContext)
+
+    const platform = result.costCenterResults.find(cc => cc.costCenterName === 'Platform')!
+    const mona = platform.userBreakdowns.find(u => u.username === 'mona')!
+    expect(mona.budgetUsd).toBe(20)
+    expect(mona.grossConsumed).toBe(10)
+    expect(mona.blockedDate).toBeNull()
+
+    const octocat = platform.userBreakdowns.find(u => u.username === 'octocat')!
+    expect(octocat.budgetUsd).toBe(5)
+    expect(octocat.grossConsumed).toBe(5)
+    expect(octocat.blockedDate).toBe('2026-06-01')
+  })
 })
 
 describe('runBudgetSimulation', () => {
