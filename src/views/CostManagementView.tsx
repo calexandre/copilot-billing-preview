@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { DualAxisLineChart } from '../components'
 import { BillingTotalsCards } from '../components/ui'
 import { PRODUCT_BUDGET_COPILOT, PRODUCT_BUDGET_COPILOT_CLOUD_AGENT, PRODUCT_BUDGET_SPARK } from '../pipeline/productClassification'
@@ -312,6 +312,66 @@ export function CostManagementView({
     })
   }
 
+  const autoFillCostCenterBudgetsWithValue = (budgetValue: number) => {
+    const totalConsumption = sortedCostCenters.reduce((sum, cc) => sum + Math.max(cc.totals.aicNetAmount, 0), 0)
+    if (totalConsumption <= 0) {
+      sortedCostCenters.forEach((cc) => onCostCenterBudgetChange(cc.costCenterName, '0'))
+      return
+    }
+
+    const totalBudgetUnits = Math.floor(budgetValue)
+    const weightedAllocations = sortedCostCenters.map((cc) => {
+      const weight = Math.max(cc.totals.aicNetAmount, 0)
+      const rawUnits = (weight / totalConsumption) * totalBudgetUnits
+      const floorUnits = Math.floor(rawUnits)
+      return {
+        costCenterName: cc.costCenterName,
+        floorUnits,
+        fractional: rawUnits - floorUnits,
+        weight,
+      }
+    })
+
+    let assignedUnits = weightedAllocations.reduce((sum, item) => sum + item.floorUnits, 0)
+    if (assignedUnits < totalBudgetUnits) {
+      weightedAllocations
+        .sort((a, b) => {
+          if (b.fractional !== a.fractional) return b.fractional - a.fractional
+          if (b.weight !== a.weight) return b.weight - a.weight
+          return a.costCenterName.localeCompare(b.costCenterName)
+        })
+        .slice(0, totalBudgetUnits - assignedUnits)
+        .forEach((item) => {
+          item.floorUnits += 1
+        })
+      assignedUnits = totalBudgetUnits
+    }
+
+    if (assignedUnits > totalBudgetUnits) return
+
+    weightedAllocations.forEach((item) => {
+      onCostCenterBudgetChange(item.costCenterName, String(item.floorUnits))
+    })
+  }
+
+  const [pendingSimulation, setPendingSimulation] = useState(false)
+
+  useEffect(() => {
+    if (pendingSimulation && hasVisibleBudgetValue) {
+      setPendingSimulation(false)
+      onApplyBudgetSimulation()
+    }
+  }, [pendingSimulation, hasVisibleBudgetValue, onApplyBudgetSimulation])
+
+  const handlePresetClick = (presetValue: number) => {
+    onBudgetValueChange('account', String(presetValue))
+    onBudgetValueChange('user', '200')
+    if (!isIndividualReport && sortedCostCenters.length > 0) {
+      autoFillCostCenterBudgetsWithValue(presetValue)
+    }
+    setPendingSimulation(true)
+  }
+
   return (
     <section className="flex flex-col gap-6" aria-label="Cost management">
       <div className="flex flex-col gap-1">
@@ -334,6 +394,28 @@ export function CostManagementView({
         showPromotionalDataDisclaimer={isIndividualReport}
         upgradeRecommendation={upgradeRecommendation}
       />
+
+      <div className="bg-bg-default border border-border-default rounded-md px-5 py-5 flex flex-col gap-3">
+        <div className="flex flex-col gap-1">
+          <strong className="text-sm font-semibold text-fg-default">Quick presets</strong>
+          <p className="m-0 text-[13px] text-fg-muted">
+            Apply a preset account budget, auto-fill cost center budgets, set user budget to $200, and run the simulation.
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-3">
+          {[5000, 15000, 30000].map((preset) => (
+            <button
+              key={preset}
+              type="button"
+              className="px-4 py-2 text-[13px] font-medium border border-border-default rounded-md bg-bg-default text-fg-default cursor-pointer hover:bg-bg-muted disabled:opacity-50 disabled:cursor-default"
+              onClick={() => handlePresetClick(preset)}
+              disabled={isApplyingBudgetSimulation}
+            >
+              ${preset.toLocaleString()} budget
+            </button>
+          ))}
+        </div>
+      </div>
 
       <div className={`grid grid-cols-1 ${isIndividualReport ? '' : 'xl:grid-cols-2'} gap-4`}>
         {visibleAccountBudgetFields.map(({ field, label, description }) => (
@@ -724,6 +806,9 @@ export function CostManagementView({
               {!isIndividualReport && (
                 <p className="m-0">
                   First user-level budget block: <strong className="text-fg-default">{formatSimulationDate(budgetSimulation.firstUserBlockedDate)}</strong>
+                  {budgetSimulation.firstUserBlockedUsername && (
+                    <> (user: <strong className="text-fg-default">{budgetSimulation.firstUserBlockedUsername}</strong>)</>
+                  )}
                 </p>
               )}
               <p className="m-0">

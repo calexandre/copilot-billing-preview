@@ -20,6 +20,7 @@ export type BudgetSimulationResult = {
   blockedIncludedCreditsAic: number
   budgetExhausted: boolean
   firstUserBlockedDate: string | null
+  firstUserBlockedUsername: string | null
   accountBlockedDate: string | null
   costCenterBlockedDates: Record<string, string>
   costCenterResults: CostCenterSimulationResult[]
@@ -56,6 +57,7 @@ type BudgetSimulationState = {
   blockedRequests: number
   budgetExhausted: boolean
   firstUserBlockedDate: string | null
+  firstUserBlockedUsername: string | null
   accountBlockedDate: string | null
   productBlockedDates: Partial<Record<ProductBudgetName, string>>
   blockedUsers: Set<string>
@@ -138,6 +140,7 @@ function createBudgetSimulationState(
     blockedRequests: 0,
     budgetExhausted: false,
     firstUserBlockedDate: null,
+    firstUserBlockedUsername: null,
     accountBlockedDate: null,
     productBlockedDates: {},
     blockedUsers: new Set<string>(),
@@ -317,6 +320,7 @@ function simulateBudgetRecord(
       }
       if (userBudgetLimited && state.firstUserBlockedDate === null) {
         state.firstUserBlockedDate = record.date || null
+        state.firstUserBlockedUsername = budgetSubject || null
       }
     }
 
@@ -457,6 +461,7 @@ function finalizeBudgetSimulation(
     blockedIncludedCreditsAic,
     budgetExhausted: state.budgetExhausted,
     firstUserBlockedDate: state.firstUserBlockedDate,
+    firstUserBlockedUsername: state.firstUserBlockedUsername,
     accountBlockedDate: state.accountBlockedDate,
     costCenterBlockedDates: state.costCenterBlockedDates,
     costCenterResults,
