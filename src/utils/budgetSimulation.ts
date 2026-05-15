@@ -3,12 +3,15 @@ import { getAicUsageMetrics, getUsageMetrics, parseNormalizedTokenUsageRecord, p
 import { getProductBudgetName, isNonCopilotCodeReviewUsage, NON_COPILOT_CODE_REVIEW_USER_LABEL, type ProductBudgetName } from '../pipeline/productClassification'
 import { streamLines } from '../pipeline/streamer'
 
+export type CostCenterUserBlockedReason = 'account' | 'cost_center' | 'user' | 'product'
+
 export type CostCenterUserBreakdown = {
   username: string
   grossConsumed: number
   totalGrossConsumed: number
   budgetUsd: number
   blockedDate: string | null
+  blockedReason: CostCenterUserBlockedReason | null
 }
 
 export type CostCenterSimulationResult = {
@@ -54,6 +57,7 @@ type CostCenterBudgetState = {
   userGrossConsumed: Map<string, number>
   userTotalGrossConsumed: Map<string, number>
   userBlockedDates: Map<string, string>
+  userBlockedReasons: Map<string, CostCenterUserBlockedReason>
 }
 
 type BudgetSimulationState = {
@@ -136,6 +140,7 @@ function createBudgetSimulationState(
         userGrossConsumed: new Map(),
         userTotalGrossConsumed: new Map(),
         userBlockedDates: new Map(),
+        userBlockedReasons: new Map(),
       })
     }
   }
@@ -339,6 +344,14 @@ function simulateBudgetRecord(
           const ccState = state.costCenterBudgets.get(costCenterName)
           if (ccState && !ccState.userBlockedDates.has(budgetSubject) && record.date) {
             ccState.userBlockedDates.set(budgetSubject, record.date)
+            const reason: CostCenterUserBlockedReason = accountBudgetLimited
+              ? 'account'
+              : ccBudgetLimited
+                ? 'cost_center'
+                : productBudgetLimited
+                  ? 'product'
+                  : 'user'
+            ccState.userBlockedReasons.set(budgetSubject, reason)
           }
         }
       }
@@ -483,6 +496,7 @@ function finalizeBudgetSimulation(
             totalGrossConsumed: ccState.userTotalGrossConsumed.get(username) ?? grossConsumed,
             budgetUsd: userBudget === Number.POSITIVE_INFINITY ? 0 : userBudget,
             blockedDate: ccState.userBlockedDates.get(username) ?? null,
+            blockedReason: ccState.userBlockedReasons.get(username) ?? null,
           }
         })
         .sort((a, b) => {

@@ -901,7 +901,7 @@ function SimulationSummaryCard({ label, value }: SimulationSummaryCardProps) {
   )
 }
 
-type CcUserSortKey = 'user' | 'allowed' | 'budget' | 'pct' | 'total' | 'blocked'
+type CcUserSortKey = 'user' | 'allowed' | 'budget' | 'pct' | 'total' | 'blocked' | 'reason'
 
 const CC_USER_COLUMNS: Array<{ key: CcUserSortKey; abbr: string; title: string; align?: 'right' }> = [
   { key: 'user', abbr: 'User', title: 'Username' },
@@ -910,6 +910,7 @@ const CC_USER_COLUMNS: Array<{ key: CcUserSortKey; abbr: string; title: string; 
   { key: 'pct', abbr: '%', title: 'Consumption as percentage of budget', align: 'right' },
   { key: 'total', abbr: 'Total', title: 'Total consumption (including usage that would have occurred without budgets)', align: 'right' },
   { key: 'blocked', abbr: 'Blocked', title: 'Date the user was first blocked' },
+  { key: 'reason', abbr: 'Reason', title: 'Budget gate that caused the block' },
 ]
 
 function CostCenterUserTable({ users }: { users: CostCenterUserBreakdown[] }) {
@@ -936,6 +937,12 @@ function CostCenterUserTable({ users }: { users: CostCenterUserBreakdown[] }) {
           else if (a.blockedDate) cmp = -1
           else if (b.blockedDate) cmp = 1
           else cmp = b.totalGrossConsumed - a.totalGrossConsumed
+          break
+        }
+        case 'reason': {
+          const ra = a.blockedReason ?? ''
+          const rb = b.blockedReason ?? ''
+          cmp = ra.localeCompare(rb)
           break
         }
       }
@@ -981,6 +988,7 @@ function CostCenterUserTable({ users }: { users: CostCenterUserBreakdown[] }) {
                 <td className="px-1.5 py-0.5 text-fg-muted tabular-nums text-right whitespace-nowrap">{pct !== null ? `${pct}%` : '—'}</td>
                 <td className="px-1.5 py-0.5 text-fg-muted tabular-nums text-right whitespace-nowrap">{formatUsd(u.totalGrossConsumed)}</td>
                 <td className="px-1.5 py-0.5 text-fg-muted whitespace-nowrap">{u.blockedDate ? formatSimulationDate(u.blockedDate) : '—'}</td>
+                <td className="px-1.5 py-0.5 text-fg-muted whitespace-nowrap">{u.blockedReason ?? '—'}</td>
               </tr>
             )
           })}
