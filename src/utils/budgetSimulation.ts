@@ -433,9 +433,6 @@ function finalizeBudgetSimulation(
     .map(([costCenterName, ccState]) => {
       const budgetUsd = ccState.additionalSpendConsumed + ccState.remainingBudget
       const additionalSpendConsumed = ccState.additionalSpendConsumed
-      const amountBlocked = Math.max(0, budgetUsd - additionalSpendConsumed) <= 0
-        ? 0  // budget was fully consumed
-        : 0
       const utilizationPercent = budgetUsd > 0 ? Math.min(100, (additionalSpendConsumed / budgetUsd) * 100) : 0
       const consumptionPercent = state.totalAicGrossAmount > 0
         ? (ccState.totalAicGrossConsumed / state.totalAicGrossAmount) * 100
