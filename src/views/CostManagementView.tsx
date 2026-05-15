@@ -260,8 +260,9 @@ export function CostManagementView({
         adjustedRunningTotal += adjustedByDate.get(date) ?? 0
         return adjustedRunningTotal
       }),
+      accountBudget: accountBudgetValue !== undefined ? labels.map(() => accountBudgetValue) : null,
     }
-  }, [budgetSimulation, dailyUsageData])
+  }, [budgetSimulation, dailyUsageData, accountBudgetValue])
 
   const handleAutoFillCostCenterBudgets = () => {
     if (costCenterMaxAllocation === undefined) {
@@ -775,6 +776,12 @@ export function CostManagementView({
                     data: cumulativeSimulationSeries.adjusted,
                     yAxisID: 'y',
                   },
+                  ...(cumulativeSimulationSeries.accountBudget ? [{
+                    label: 'Account level budget',
+                    color: '#26a641',
+                    data: cumulativeSimulationSeries.accountBudget,
+                    yAxisID: 'y',
+                  }] : []),
                 ]}
                 formatYAsCurrency
                 height={320}

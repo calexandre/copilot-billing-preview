@@ -23,7 +23,7 @@ export interface LineSeries {
 export interface DualAxisLineChartProps {
   title: string
   labels: string[]
-  series: [LineSeries, LineSeries]
+  series: LineSeries[]
   height?: number
   formatYAsCurrency?: boolean
 }
@@ -51,6 +51,7 @@ export function DualAxisLineChart({
   const sharedAxisColor = '#475569'
   const primaryAxisTitle = usesSecondaryAxis ? series[0].label : `${series[0].label} / ${series[1].label}`
   const primaryAxisColor = usesSecondaryAxis ? series[0].color : sharedAxisColor
+  const secondaryAxisLabel = series.find((s) => s.yAxisID === 'y1')?.label || series[1]?.label
 
   const chartData = {
     labels,
@@ -125,14 +126,14 @@ export function DualAxisLineChart({
         beginAtZero: true,
         title: {
           display: true,
-          text: series[1].label,
+          text: secondaryAxisLabel,
           font: { size: 11, weight: 500 },
-          color: series[1].color,
+          color: series.find((s) => s.yAxisID === 'y1')?.color || series[1]?.color || '#475569',
         },
         grid: { drawOnChartArea: false },
         ticks: {
           font: { size: 11 },
-          color: series[1].color,
+          color: series.find((s) => s.yAxisID === 'y1')?.color || series[1]?.color || '#475569',
           callback: (value) => (typeof value === 'number' ? tickFormatter(value) : value),
         },
       },
