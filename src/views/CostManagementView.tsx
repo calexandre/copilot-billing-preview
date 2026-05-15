@@ -96,6 +96,10 @@ function sanitizeUsdInput(value: string): string {
   return `${wholePart}.${decimalPart}`
 }
 
+function sanitizeWholeNumberInput(value: string): string {
+  return value.replace(/[^0-9]/g, '')
+}
+
 function formatSimulationDate(value: string | null): string {
   if (!value) {
     return 'Not reached in this simulation.'
@@ -150,6 +154,7 @@ export function CostManagementView({
   onApplyBudgetSimulation,
 }: CostManagementViewProps) {
   const [powerUserInput, setPowerUserInput] = useState('')
+  const [costCenterAutoFillCap, setCostCenterAutoFillCap] = useState('')
   const visibleAccountBudgetFields = isIndividualReport ? INDIVIDUAL_BUDGET_FIELDS : ACCOUNT_BUDGET_FIELDS
   const hasCostCenterBudgetValue = Object.values(costCenterBudgets).some((v) => v.trim() !== '')
   const hasPowerUserBudgetValue = Object.values(powerUserBudgets).some((v) => v.trim() !== '')
@@ -163,6 +168,11 @@ export function CostManagementView({
     return users.filter((u) => u.costCenters.length === 0 || u.costCenters.every((cc) => !ccNames.has(cc)))
   }, [costCenters, users])
 
+  const sortedCostCenters = useMemo(
+    () => [...costCenters].sort((a, b) => b.totals.aicNetAmount - a.totals.aicNetAmount),
+    [costCenters],
+  )
+
   const powerUserSuggestions = useMemo(() => {
     const already = new Set(Object.keys(powerUserBudgets))
     const query = powerUserInput.trim().toLowerCase()
@@ -174,6 +184,19 @@ export function CostManagementView({
   }, [powerUserInput, powerUserBudgets, users])
 
   const accountBudgetParsed = budgetValues.account.trim() !== '' ? Number(budgetValues.account) : undefined
+  const accountBudgetValue = accountBudgetParsed !== undefined && Number.isFinite(accountBudgetParsed)
+    ? accountBudgetParsed
+    : undefined
+  const costCenterAutoFillCapParsed = costCenterAutoFillCap.trim() !== '' ? Number(costCenterAutoFillCap) : undefined
+  const costCenterMaxAllocation = accountBudgetValue === undefined
+    ? undefined
+    : Math.min(
+      accountBudgetValue,
+      costCenterAutoFillCapParsed !== undefined && Number.isFinite(costCenterAutoFillCapParsed)
+        ? Math.max(0, costCenterAutoFillCapParsed)
+        : accountBudgetValue,
+    )
+  const isCostCenterAutoFillEnabled = costCenterMaxAllocation !== undefined
   const costCenterBudgetSum = Object.values(costCenterBudgets).reduce((sum, v) => {
     const n = Number(v)
     return sum + (Number.isFinite(n) ? n : 0)
@@ -208,6 +231,54 @@ export function CostManagementView({
       }),
     }
   }, [budgetSimulation, dailyUsageData])
+
+  const handleAutoFillCostCenterBudgets = () => {
+    if (costCenterMaxAllocation === undefined) {
+      return
+    }
+
+    const totalConsumption = sortedCostCenters.reduce((sum, cc) => sum + Math.max(cc.totals.aicNetAmount, 0), 0)
+    if (totalConsumption <= 0) {
+      sortedCostCenters.forEach((cc) => onCostCenterBudgetChange(cc.costCenterName, '0'))
+      return
+    }
+
+    const totalBudgetUnits = Math.floor(costCenterMaxAllocation)
+    const weightedAllocations = sortedCostCenters.map((cc) => {
+      const weight = Math.max(cc.totals.aicNetAmount, 0)
+      const rawUnits = (weight / totalConsumption) * totalBudgetUnits
+      const floorUnits = Math.floor(rawUnits)
+      return {
+        costCenterName: cc.costCenterName,
+        floorUnits,
+        fractional: rawUnits - floorUnits,
+        weight,
+      }
+    })
+
+    let assignedUnits = weightedAllocations.reduce((sum, item) => sum + item.floorUnits, 0)
+    if (assignedUnits < totalBudgetUnits) {
+      weightedAllocations
+        .sort((a, b) => {
+          if (b.fractional !== a.fractional) return b.fractional - a.fractional
+          if (b.weight !== a.weight) return b.weight - a.weight
+          return a.costCenterName.localeCompare(b.costCenterName)
+        })
+        .slice(0, totalBudgetUnits - assignedUnits)
+        .forEach((item) => {
+          item.floorUnits += 1
+        })
+      assignedUnits = totalBudgetUnits
+    }
+
+    if (assignedUnits > totalBudgetUnits) {
+      return
+    }
+
+    weightedAllocations.forEach((item) => {
+      onCostCenterBudgetChange(item.costCenterName, String(item.floorUnits))
+    })
+  }
 
   return (
     <section className="flex flex-col gap-6" aria-label="Cost management">
@@ -268,6 +339,43 @@ export function CostManagementView({
                 <> <span className="text-fg-attention">{usersNotInCostCenter.length} user{usersNotInCostCenter.length > 1 ? 's are' : ' is'} not assigned to any cost center and will bypass this gate.</span></>
               )}
             </p>
+            <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_auto] gap-3 items-end">
+              <label className="flex flex-col gap-1">
+                <span className="text-[13px] font-medium text-fg-default">Max budget to allocate</span>
+                <div className="flex items-center rounded-md border border-border-default bg-bg-default focus-within:border-fg-accent focus-within:shadow-[0_0_0_3px_rgba(9,105,218,0.3)]">
+                  <span className="pl-3 text-sm font-medium text-fg-muted" aria-hidden>
+                    $
+                  </span>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    className="w-full border-0 bg-transparent px-2 py-2.5 text-sm text-fg-default outline-none"
+                    value={costCenterAutoFillCap}
+                    onChange={(event) => setCostCenterAutoFillCap(sanitizeWholeNumberInput(event.target.value))}
+                    placeholder="Uses account budget if empty"
+                    aria-label="Maximum budget allocated to cost centers"
+                  />
+                </div>
+              </label>
+              <button
+                type="button"
+                className="px-3 py-2 text-[13px] font-medium border border-border-default rounded-md bg-bg-default text-fg-default cursor-pointer hover:bg-bg-muted disabled:opacity-50 disabled:cursor-default"
+                onClick={handleAutoFillCostCenterBudgets}
+                disabled={!isCostCenterAutoFillEnabled}
+              >
+                Auto-fill cost center budgets
+              </button>
+            </div>
+            {accountBudgetValue === undefined && (
+              <p className="m-0 text-[13px] text-fg-muted">
+                Enter an account level budget to enable auto-fill.
+              </p>
+            )}
+            {accountBudgetValue !== undefined && costCenterAutoFillCapParsed !== undefined && Number.isFinite(costCenterAutoFillCapParsed) && costCenterAutoFillCapParsed > accountBudgetValue && (
+              <p className="m-0 text-[13px] text-fg-attention">
+                Auto-fill cap is limited to the account budget ({formatUsd(accountBudgetValue)}).
+              </p>
+            )}
             {hasCostCenterBudgetValue && accountBudgetParsed !== undefined && costCenterBudgetSum > accountBudgetParsed && (
               <p className="m-0 text-[13px] text-fg-attention">
                 ⚠️ The sum of cost center budgets ({formatUsd(costCenterBudgetSum)}) exceeds the account budget ({formatUsd(accountBudgetParsed)}).
@@ -276,11 +384,11 @@ export function CostManagementView({
           </div>
 
           <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
-            {[...costCenters].sort((a, b) => b.totals.aicNetAmount - a.totals.aicNetAmount).map((cc) => (
+            {sortedCostCenters.map((cc) => (
               <label key={cc.costCenterName} className="border border-border-default rounded-md px-5 py-5 flex flex-col gap-3 bg-bg-muted/30">
                 <div className="flex flex-col gap-1">
                   <span className="text-sm font-semibold text-fg-default">{cc.costCenterName}</span>
-                  <span className="text-[13px] text-fg-muted leading-normal">{cc.userCount} user{cc.userCount !== 1 ? 's' : ''} · {formatUsd(cc.totals.aicNetAmount)} AIC net spend · {currentAicBill > 0 ? ((cc.totals.aicNetAmount / currentAicBill) * 100).toFixed(1) : '0.0'}%</span>
+                  <span className="text-[13px] text-fg-muted leading-normal">{cc.userCount} user{cc.userCount !== 1 ? 's' : ''} · {formatUsd(cc.totals.aicNetAmount)} AIC net spend · {currentAicBill > 0 ? Math.round((cc.totals.aicNetAmount / currentAicBill) * 100) : 0}%</span>
                 </div>
 
                 <div className="flex items-center rounded-md border border-border-default bg-bg-default focus-within:border-fg-accent focus-within:shadow-[0_0_0_3px_rgba(9,105,218,0.3)]">
@@ -289,11 +397,11 @@ export function CostManagementView({
                   </span>
                   <input
                     type="text"
-                    inputMode="decimal"
+                    inputMode="numeric"
                     className="w-full border-0 bg-transparent px-2 py-2.5 text-sm text-fg-default outline-none"
                     value={costCenterBudgets[cc.costCenterName] ?? ''}
-                    onChange={(event) => onCostCenterBudgetChange(cc.costCenterName, sanitizeUsdInput(event.target.value))}
-                    placeholder="0.00"
+                    onChange={(event) => onCostCenterBudgetChange(cc.costCenterName, sanitizeWholeNumberInput(event.target.value))}
+                    placeholder="0"
                     aria-label={`${cc.costCenterName} budget`}
                   />
                 </div>
