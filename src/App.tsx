@@ -24,7 +24,13 @@ import { ProductUsageAggregator, type ProductUsageResult } from './pipeline/aggr
 import { CostCenterAggregator, type CostCenterResult } from './pipeline/aggregators/costCenterAggregator'
 import { OrganizationAggregator, type OrganizationResult } from './pipeline/aggregators/organizationAggregator'
 import { UserUsageAggregator, type UserUsageResult } from './pipeline/aggregators/userUsageAggregator'
-import { calculateLicenseSummary, inferReportPlanScope, type AicIncludedCreditsOverrides } from './pipeline/aicIncludedCredits'
+import {
+  BUSINESS_MONTHLY_AIC_INCLUDED_CREDITS,
+  ENTERPRISE_MONTHLY_AIC_INCLUDED_CREDITS,
+  calculateLicenseSummary,
+  inferReportPlanScope,
+  type AicIncludedCreditsOverrides,
+} from './pipeline/aicIncludedCredits'
 import { PRODUCT_BUDGET_COPILOT, PRODUCT_BUDGET_COPILOT_CLOUD_AGENT, PRODUCT_BUDGET_SPARK } from './pipeline/productClassification'
 import { runPipeline } from './pipeline/runPipeline'
 import { runBudgetSimulation, type BudgetSimulationResult } from './utils/budgetSimulation'
@@ -451,6 +457,9 @@ function App() {
   const licenseSeatCounts = reportPlanScope === 'organization'
     ? { business: effectiveBusinessSeats, enterprise: effectiveEnterpriseSeats }
     : undefined
+  const includedAicPoolSize = reportPlanScope === 'organization'
+    ? (effectiveBusinessSeats * BUSINESS_MONTHLY_AIC_INCLUDED_CREDITS) + (effectiveEnterpriseSeats * ENTERPRISE_MONTHLY_AIC_INCLUDED_CREDITS)
+    : calculateLicenseSummary(reportUsers).totalIncludedAic
 
   const selectedUser = individualUser
     ?? (selectedUsername && userUsage
@@ -740,6 +749,7 @@ function App() {
                     currentAicGrossAmount={overviewTotals.aicGrossAmount}
                     currentAicDiscountAmount={overviewAicDiscountAmount}
                     currentAicQuantity={overviewTotals.aicQuantity}
+                    includedAicPoolSize={includedAicPoolSize}
                     licenseAmount={licenseAmount}
                     licenseSeatCounts={licenseSeatCounts}
                     upgradeRecommendation={individualUpgradeRecommendation}

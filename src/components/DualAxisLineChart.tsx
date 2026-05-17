@@ -8,6 +8,7 @@ import {
   Tooltip,
   Legend,
   type ChartOptions,
+  type ScriptableLineSegmentContext,
 } from 'chart.js'
 import { Line } from 'react-chartjs-2'
 
@@ -15,15 +16,21 @@ ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, T
 
 export interface LineSeries {
   label: string
-  data: number[]
+  legendLabel?: string
+  legendOrder?: number
+  data: Array<number | null>
   color: string
   yAxisID: string
+  borderDash?: number[]
+  order?: number
+  pointRadius?: number
+  segmentColor?: (startValue: number, endValue: number) => string
 }
 
 export interface DualAxisLineChartProps {
   title: string
   labels: string[]
-  series: [LineSeries, LineSeries]
+  series: [LineSeries, LineSeries, ...LineSeries[]]
   height?: number
   formatYAsCurrency?: boolean
 }
@@ -48,24 +55,48 @@ export function DualAxisLineChart({
 }: DualAxisLineChartProps) {
   const tickFormatter = formatYAsCurrency ? formatUsdTick : formatTick
   const usesSecondaryAxis = series.some((dataset) => dataset.yAxisID === 'y1')
+  const [primarySeries, secondarySeries] = series
   const sharedAxisColor = '#475569'
-  const primaryAxisTitle = usesSecondaryAxis ? series[0].label : `${series[0].label} / ${series[1].label}`
-  const primaryAxisColor = usesSecondaryAxis ? series[0].color : sharedAxisColor
+  const primaryAxisTitle = usesSecondaryAxis ? primarySeries.label : `${primarySeries.label} / ${secondarySeries.label}`
+  const primaryAxisColor = usesSecondaryAxis ? primarySeries.color : sharedAxisColor
 
   const chartData = {
     labels,
-    datasets: series.map((s) => ({
-      label: s.label,
-      data: s.data,
-      borderColor: s.color,
-      backgroundColor: s.color + '20',
-      yAxisID: s.yAxisID,
-      tension: 0.3,
-      pointRadius: 2,
-      pointHoverRadius: 5,
-      borderWidth: 2,
-      fill: false,
-    })),
+    datasets: series.map((s) => {
+      const segmentColor = s.segmentColor
+      const pointRadius = s.pointRadius ?? 2
+      const pointColor = segmentColor
+        ? s.data.map((value) => (typeof value === 'number' ? segmentColor(value, value) : s.color))
+        : s.color
+
+        return {
+        label: s.label,
+        legendLabel: s.legendLabel,
+        legendOrder: s.legendOrder,
+        data: s.data,
+        borderColor: s.color,
+        backgroundColor: s.color + '20',
+        pointBackgroundColor: pointColor,
+        pointBorderColor: pointColor,
+        yAxisID: s.yAxisID,
+        tension: 0.3,
+        pointRadius,
+        pointHoverRadius: pointRadius === 0 ? 0 : 5,
+        borderWidth: 2,
+        borderDash: s.borderDash,
+        order: s.order,
+        segment: segmentColor
+          ? {
+              borderColor: (context: ScriptableLineSegmentContext) => {
+                const startValue = Number(context.p0.parsed.y)
+                const endValue = Number(context.p1.parsed.y)
+                return segmentColor(startValue, endValue)
+              },
+            }
+          : undefined,
+        fill: false,
+      }
+    }),
   }
 
   const options: ChartOptions<'line'> = {
@@ -78,6 +109,25 @@ export function DualAxisLineChart({
           usePointStyle: true,
           padding: 12,
           font: { size: 11, weight: 500 },
+          generateLabels: (chart) => {
+            const defaultLabels = ChartJS.defaults.plugins.legend.labels.generateLabels?.(chart) ?? []
+            return defaultLabels.map((item) => {
+              const dataset = typeof item.datasetIndex === 'number'
+                ? chart.data.datasets[item.datasetIndex] as { legendLabel?: string, legendOrder?: number }
+                : undefined
+
+              return dataset?.legendLabel ? { ...item, text: dataset.legendLabel } : item
+            }).sort((a, b) => {
+              const datasetA = typeof a.datasetIndex === 'number'
+                ? chart.data.datasets[a.datasetIndex] as { legendOrder?: number }
+                : undefined
+              const datasetB = typeof b.datasetIndex === 'number'
+                ? chart.data.datasets[b.datasetIndex] as { legendOrder?: number }
+                : undefined
+
+              return (datasetA?.legendOrder ?? a.datasetIndex ?? 0) - (datasetB?.legendOrder ?? b.datasetIndex ?? 0)
+            })
+          },
         },
       },
       title: {
